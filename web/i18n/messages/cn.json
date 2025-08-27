@@ -1,0 +1,86 @@
+{
+  "lang": "中文",
+  "app_name": "清洁生产智慧管理平台",
+  "header": {
+    "label_profile": "个人信息",
+    "label_logout": "退出登录",
+    "label_logout_dialog_title": "提示",
+    "text_logout_confirm": "确认退出？",
+    "text_logout_success": "已退出登录"
+  },
+  "views": {
+    "login": {
+      "text_login": "登录",
+      "message_input_username_password": "请输入用户名和密码",
+      "message_verifying": "正在验证...",
+      "message_login_success": "登录成功"
+    },
+    "workbench": {
+      "label_workbench": "首页",
+      "text_hello": "hello, {username}",
+      "text_welcome": "今天又是元气满满的一天!",
+      "label_number_of_items": "项目数",
+      "label_upcoming": "待办",
+      "label_information": "消息",
+      "label_project": "项目",
+      "label_more": "更多"
+    },
+    "clean-production": {
+      "label_management": "清洁生产管理",
+      "label_policy": "清洁生产政策与管理",
+      "label_audit": "清洁生产云审核",
+      "label_technology": "清洁生产技术集成",
+      "label_decision": "清洁生产智慧决策",
+      "label_enterprise": "企业信息管理",
+      "label_monitor": "生产数据监控",
+      "label_indicators": "环保指标管理",
+      "label_notice": "通知公告",
+      "label_news": "动态信息",
+      "label_regulations": "清洁生产法规政策",
+      "label_capacity": "能力建设",
+      "label_meetings": "会议与宣传",
+      "label_review": "审核任务管理",
+      "label_report": "审核报告生成",
+      "label_history": "审核历史记录",
+      "label_solutions": "技术方案库",
+      "label_assessment": "技术评估工具",
+      "label_service": "技术对接服务",
+      "label_analysis": "数据分析中心",
+      "label_support": "决策支持系统",
+      "label_prediction": "预测模型管理"
+    },
+    "profile": {
+      "label_profile": "个人中心",
+      "label_modify_information": "修改信息",
+      "label_change_password": "修改密码",
+      "label_avatar": "头像",
+      "label_username": "用户姓名",
+      "label_email": "邮箱",
+      "label_old_password": "旧密码",
+      "label_new_password": "新密码",
+      "label_confirm_password": "确认密码",
+      "placeholder_username": "请填写姓名",
+      "placeholder_email": "请填写邮箱",
+      "placeholder_old_password": "请输入旧密码",
+      "placeholder_new_password": "请输入新密码",
+      "placeholder_confirm_password": "请再次输入新密码",
+      "message_username_required": "请输入昵称",
+      "message_old_password_required": "请输入旧密码",
+      "message_new_password_required": "请输入新密码",
+      "message_password_confirmation_required": "请再次输入密码",
+      "message_password_confirmation_diff": "两次密码输入不一致"
+    },
+    "errors": {
+      "label_error": "错误页",
+      "text_back_to_home": "返回首页"
+    }
+  },
+  "common": {
+    "text": {
+      "update_success": "修改成功"
+    },
+    "buttons": {
+      "update": "修改"
+    }
+  }
+}
