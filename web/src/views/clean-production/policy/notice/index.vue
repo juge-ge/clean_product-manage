@@ -1,85 +1,156 @@
 <template>
   <div class="notice-container">
-    <!-- 搜索框 -->
-    <div class="search-wrapper">
-      <n-input-group style="width: 300px">
-        <n-input
-          v-model:value="searchKeyword"
-          placeholder="搜索"
-          clearable
-          class="search-input"
-        />
-        <n-button type="primary" @click="handleSearch" style="padding: 0 24px">
-          搜索
-        </n-button>
-      </n-input-group>
+    <!-- 首页模式 -->
+    <div v-if="displayMode === 'home'">
+      <!-- 搜索框 -->
+      <div class="search-wrapper">
+        <n-input-group style="width: 300px">
+          <n-input
+            v-model:value="searchKeyword"
+            placeholder="搜索"
+            clearable
+            class="search-input"
+          />
+          <n-button type="primary" @click="handleSearch" style="padding: 0 24px">
+            搜索
+          </n-button>
+        </n-input-group>
+      </div>
+
+      <!-- 两栏布局 -->
+      <div class="notice-grid mt-4">
+        <!-- 国家通知公告 -->
+        <div class="notice-column">
+          <n-card :bordered="false" class="notice-card">
+            <template #header>
+              <div class="card-header">
+                <span class="header-title">国家通知公告</span>
+                <n-button text type="primary" @click="goToList('national')" class="header-action">
+                  查看更多 <n-icon><i class="mdi" :class="arrowRightIcon" /></n-icon>
+                </n-button>
+              </div>
+            </template>
+            <n-list hoverable clickable>
+              <n-list-item v-for="item in nationalNotices.slice(0, 5)" :key="item.id">
+                <n-thing>
+                  <template #header>
+                    <a href="javascript:;" @click="goToDetail(item.id)" class="notice-title">
+                      {{ item.title }}
+                    </a>
+                  </template>
+                  <template #description>
+                    <n-space align="center">
+                      <n-tag size="small" type="info">{{ item.source }}</n-tag>
+                      <span class="notice-date">{{ item.publishDate }}</span>
+                    </n-space>
+                  </template>
+                </n-thing>
+              </n-list-item>
+            </n-list>
+          </n-card>
+        </div>
+
+        <!-- 各省通知公告 -->
+        <div class="notice-column">
+          <n-card :bordered="false" class="notice-card">
+            <template #header>
+              <div class="card-header">
+                <span class="header-title">各省通知公告</span>
+                <n-button text type="primary" @click="goToList('provincial')" class="header-action">
+                  查看更多 <n-icon><i class="mdi" :class="arrowRightIcon" /></n-icon>
+                </n-button>
+              </div>
+            </template>
+            <n-list hoverable clickable>
+              <n-list-item v-for="item in provincialNotices.slice(0, 5)" :key="item.id">
+                <n-thing>
+                  <template #header>
+                    <a href="javascript:;" @click="goToDetail(item.id)" class="notice-title">
+                      {{ item.title }}
+                    </a>
+                  </template>
+                  <template #description>
+                    <n-space>
+                      <n-tag size="small" type="success">{{ item.province }}</n-tag>
+                      <span class="notice-date">{{ item.publishDate }}</span>
+                    </n-space>
+                  </template>
+                </n-thing>
+              </n-list-item>
+            </n-list>
+          </n-card>
+        </div>
+      </div>
     </div>
 
-    <!-- 两栏布局 -->
-    <div class="notice-grid mt-4">
-      <!-- 国家通知公告 -->
-      <div class="notice-column">
-        <n-card :bordered="false" class="notice-card">
-          <template #header>
-            <div class="card-header">
-              <span class="header-title">国家通知公告</span>
-              <n-button text type="primary" @click="goToList('national')" class="header-action">
-                查看更多 <n-icon><i class="mdi" :class="arrowRightIcon" /></n-icon>
+    <!-- 列表模式 -->
+    <div v-else-if="displayMode === 'list'">
+
+      <!-- 列表内容 -->
+      <n-card class="mt-2">
+        <template #header>
+          <n-space justify="space-between" align="center">
+            <n-space align="center">
+              <span class="page-title">{{ getListTitle() }}</span>
+              <n-button 
+                type="primary" 
+                ghost 
+                size="small" 
+                @click="goHome"
+                style="margin-left: 16px"
+              >
+                返回通知公告
               </n-button>
+            </n-space>
+            <n-space>
+              <n-input
+                v-model:value="searchKeyword"
+                placeholder="请输入关键词搜索"
+                style="width: 200px"
+              />
+              <n-button type="primary" @click="handleSearch">搜索</n-button>
+            </n-space>
+          </n-space>
+        </template>
+
+        <n-list hoverable clickable>
+          <n-list-item v-for="item in getFilteredNotices()" :key="item.id" class="list-item-optimized">
+            <div class="list-item-content">
+              <div class="title-section">
+                <a href="javascript:;" @click="goToDetail(item.id)" class="notice-title">
+                  {{ item.title }}
+                </a>
+                <template v-if="item.province">
+                  <n-tag size="small" type="success" class="source-tag">{{ item.province }}</n-tag>
+                </template>
+                <template v-else>
+                  <n-tag size="small" type="info" class="source-tag">{{ item.source }}</n-tag>
+                </template>
+              </div>
+              <div class="date-section">
+                <span class="notice-date">{{ item.publishDate }}</span>
+              </div>
             </div>
-          </template>
-          <n-list hoverable clickable>
-            <n-list-item v-for="item in nationalNotices.slice(0, 6)" :key="item.id">
-              <n-thing>
-                <template #header>
-                  <a href="javascript:;" @click="goToDetail(item.id)" class="notice-title">
-                    {{ item.title }}
-                  </a>
-                </template>
-                <template #description>
-                  <n-space align="center">
-                    <n-tag size="small" type="info">{{ item.source }}</n-tag>
-                    <span class="notice-date">{{ item.publishDate }}</span>
-                  </n-space>
-                </template>
-              </n-thing>
-            </n-list-item>
-          </n-list>
+          </n-list-item>
+        </n-list>
 
-        </n-card>
-      </div>
-
-      <!-- 各省通知公告 -->
-      <div class="notice-column">
-        <n-card :bordered="false" class="notice-card">
-          <template #header>
-            <div class="card-header">
-              <span class="header-title">各省通知公告</span>
-              <n-button text type="primary" @click="goToList('provincial')" class="header-action">
-                查看更多 <n-icon><i class="mdi" :class="arrowRightIcon" /></n-icon>
-              </n-button>
-            </div>
-          </template>
-          <n-list hoverable clickable>
-            <n-list-item v-for="item in provincialNotices.slice(0, 6)" :key="item.id">
-              <n-thing>
-                <template #header>
-                  <a href="javascript:;" @click="goToDetail(item.id)" class="notice-title">
-                    {{ item.title }}
-                  </a>
-                </template>
-                <template #description>
-                  <n-space align="center">
-                    <n-tag size="small" type="success">{{ item.province }}</n-tag>
-                    <span class="notice-date">{{ item.publishDate }}</span>
-                  </n-space>
-                </template>
-              </n-thing>
-            </n-list-item>
-          </n-list>
-
-        </n-card>
-      </div>
+        <!-- 分页 -->
+        <div class="pagination-wrapper">
+          <div class="pagination-content">
+            <span class="total-count">共{{ getTotalCount() }}条</span>
+            <n-pagination
+              v-model:page="currentPage"
+              :page-size="pageSize"
+              :item-count="getTotalCount()"
+              show-quick-jumper
+              show-size-picker
+              :page-sizes="[10, 20, 30, 50]"
+              :page-count="Math.ceil(getTotalCount() / pageSize)"
+              class="custom-pagination"
+            />
+          </div>
+        </div>
+      </n-card>
     </div>
 
     <!-- 详情弹窗 -->
@@ -167,7 +238,7 @@ const generateMockNotices = (type, count = 20) => {
       title: titles[i],
       publishDate: `2025-${String(randomMonth).padStart(2, '0')}-${String(randomDay).padStart(2, '0')}`,
       source: randomSource,
-      province: type === 'provincial' ? randomSource.replace('生态环境厅', '省') : undefined
+      province: type === 'provincial' ? randomSource.replace('生态环境厅', '') : undefined
     })
   }
   
@@ -183,53 +254,104 @@ const provincialNotices = ref(generateMockNotices('provincial', 20))
 const showDetailModal = ref(false)
 const currentNoticeId = ref(null)
 
+// 控制显示模式：'home' 为首页，'list' 为列表页
+const displayMode = ref('home')
+const currentListType = ref('') // 当前显示的类型：'national' 或 'provincial'
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(10) // 调整为每页显示10条
+
 const goToDetail = (id) => {
   currentNoticeId.value = id
   showDetailModal.value = true
 }
 
-// 跳转到列表页
+// 切换到列表显示模式
 const goToList = (type) => {
-  console.log('跳转到列表页:', type)
-  router.push({
-    path: `/clean-production/policy/notice/list/${type}`
-  }).catch(err => {
-    console.error('路由跳转错误:', err)
-    // 如果路由错误，尝试重新加载路由
-    const permissionStore = usePermissionStore()
-    permissionStore.generateRoutes().then(() => {
-      router.push({
-        path: `/clean-production/policy/notice/list/${type}`
-      })
-    })
-  })
+  console.log('切换到列表模式:', type)
+  currentListType.value = type
+  displayMode.value = 'list'
+  currentPage.value = 1 // 重置分页
 }
 
 // 搜索处理
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
     console.log('搜索关键词:', searchKeyword.value)
-    router.push({
-      name: 'notice-search',
-      query: { keyword: searchKeyword.value }
-    }).catch(err => {
-      console.error('路由跳转错误:', err)
-    })
+    currentListType.value = 'search'
+    displayMode.value = 'list'
+    currentPage.value = 1 // 重置分页
   }
 }
 
+// 返回首页
+const goHome = () => {
+  displayMode.value = 'home'
+  currentListType.value = ''
+  searchKeyword.value = ''
+  currentPage.value = 1
+}
 
+// 获取列表标题
+const getListTitle = () => {
+  if (currentListType.value === 'national') return '国家通知公告'
+  if (currentListType.value === 'provincial') return '各省通知公告'
+  if (currentListType.value === 'search') return '搜索结果'
+  return '通知列表'
+}
+
+// 获取过滤后的通知列表
+const getFilteredNotices = () => {
+  let notices = []
+  
+  if (currentListType.value === 'national') {
+    notices = nationalNotices.value
+  } else if (currentListType.value === 'provincial') {
+    notices = provincialNotices.value
+  } else if (currentListType.value === 'search') {
+    // 搜索逻辑：合并所有通知并过滤
+    const allNotices = [...nationalNotices.value, ...provincialNotices.value]
+    const keyword = searchKeyword.value.toLowerCase()
+    notices = allNotices.filter(item => 
+      item.title.toLowerCase().includes(keyword) ||
+      (item.source && item.source.toLowerCase().includes(keyword)) ||
+      (item.province && item.province.toLowerCase().includes(keyword))
+    )
+  }
+  
+  // 分页处理
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return notices.slice(start, end)
+}
+
+// 获取总数
+const getTotalCount = () => {
+  if (currentListType.value === 'national') return nationalNotices.value.length
+  if (currentListType.value === 'provincial') return provincialNotices.value.length
+  if (currentListType.value === 'search') {
+    const allNotices = [...nationalNotices.value, ...provincialNotices.value]
+    const keyword = searchKeyword.value.toLowerCase()
+    return allNotices.filter(item => 
+      item.title.toLowerCase().includes(keyword) ||
+      (item.source && item.source.toLowerCase().includes(keyword)) ||
+      (item.province && item.province.toLowerCase().includes(keyword))
+    ).length
+  }
+  return 0
+}
 </script>
 
 <style scoped>
 .notice-container {
-  padding: 16px;
+  padding: 12px; /* 减少容器内边距 */
 }
 
 .search-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 16px;
+  margin-bottom: 12px; /* 减少搜索框下方间距 */
 }
 
 .search-input :deep(.n-input__placeholder) {
@@ -290,12 +412,24 @@ const handleSearch = () => {
 .notice-title {
   color: #333;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 15px; /* 调大字体 */
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4; /* 调整行高 */
 }
+
+/* 列表模式下的标题样式 */
+.list-item-optimized .notice-title {
+  font-size: 14px; /* 列表模式下稍微大一点 */
+  line-height: 1.5;
+  max-width: 100%;
+  white-space: normal; /* 允许换行 */
+  word-break: break-word; /* 长单词换行 */
+}
+
+
 
 .notice-title:hover {
   color: #2080f0;
@@ -303,7 +437,7 @@ const handleSearch = () => {
 
 .notice-date {
   color: #999;
-  font-size: 12px;
+  font-size: 11px; /* 调小日期字体 */
 }
 
 .view-more {
@@ -313,7 +447,115 @@ const handleSearch = () => {
   border-top: 1px solid #eee;
 }
 
-.mt-4 {
-  margin-top: 16px;
+.mt-2 {
+  margin-top: 8px; /* 减少上方间距 */
+}
+
+
+
+/* 列表项样式优化 */
+:deep(.n-list-item) {
+  padding: 6px 0; /* 进一步减少列表项间距 */
+}
+
+:deep(.n-thing-main) {
+  padding: 2px 0; /* 进一步减少内容区域间距 */
+}
+
+:deep(.n-thing-header) {
+  margin-bottom: 4px; /* 减少标题下方间距 */
+}
+
+:deep(.n-tag) {
+  font-size: 11px; /* 调小标签字体 */
+  padding: 2px 6px; /* 减少标签内边距 */
+}
+
+/* 优化后的列表项布局 */
+.list-item-optimized {
+  border-bottom: 1px dashed #e5e5e5;
+}
+
+.list-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  gap: 16px;
+}
+
+.title-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.source-tag {
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.date-section {
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: right;
+}
+
+
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.pagination-wrapper {
+  margin-top: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e5e5;
+}
+
+.pagination-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.total-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+}
+
+/* 分页组件样式优化 */
+:deep(.n-pagination) {
+  font-size: 13px; /* 调小分页字体 */
+}
+
+:deep(.n-pagination-item) {
+  min-width: 28px; /* 减少分页按钮宽度 */
+  height: 28px; /* 减少分页按钮高度 */
+}
+
+:deep(.n-pagination-item__content) {
+  padding: 0 6px; /* 减少分页按钮内边距 */
+}
+
+:deep(.n-breadcrumb-item a) {
+  color: #666;
+  text-decoration: none;
+}
+
+:deep(.n-breadcrumb-item a:hover) {
+  color: #2080f0;
 }
 </style>
