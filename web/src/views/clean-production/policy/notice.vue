@@ -1,31 +1,20 @@
 <template>
-  <div class="notice-page">
-    <n-card title="通知公告" class="notice-card">
-      <div class="notice-content">
-        <n-empty description="通知公告功能开发中..." />
-      </div>
-    </n-card>
-  </div>
+  <n-card title="通知公告">
+    <n-result
+      status="404"
+      title="功能开发中"
+      description="通知公告功能正在开发中，敬请期待..."
+    >
+      <template #footer>
+        <n-button @click="router.push('/')">返回首页</n-button>
+      </template>
+    </n-result>
+  </n-card>
 </template>
 
 <script setup>
-import { NCard, NEmpty } from 'naive-ui'
+import { NCard, NResult, NButton } from 'naive-ui'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 </script>
-
-<style scoped>
-.notice-page {
-  padding: 20px;
-}
-
-.notice-card {
-  min-height: 400px;
-}
-
-.notice-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 300px;
-}
-</style>
-

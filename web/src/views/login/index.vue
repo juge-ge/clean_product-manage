@@ -149,7 +149,7 @@ async function handleLogin() {
     position: relative;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
 
     &::before {
       content: '';
@@ -170,21 +170,20 @@ async function handleLogin() {
     .platform-info {
       position: relative;
       z-index: 1;
-      margin: 80px 0 10px;
-      margin-bottom: 30px;
+      margin-bottom: 60px;
       
       .institute-info {
         text-align: center;
 
         .institute-logo {
-          width: clamp(80px, 6.25vw, 140px);
-          height: clamp(80px, 6.25vw, 140px);
+          width: 100px;
+          height: 100px;
           margin-bottom: 30px;
           filter: brightness(1.1);
         }
 
         .platform-title {
-          font-size: clamp(36px, 2.5vw, 56px);
+          font-size: 42px;
           font-weight: 600;
           background: linear-gradient(120deg, #ffffff, #b2dfdb);
           -webkit-background-clip: text;
@@ -195,9 +194,9 @@ async function handleLogin() {
 
     .institute-name {
       position: absolute;
-      bottom: 5px;
+      bottom: 40px;
       left: 40px;
-      font-size: 14.4px;
+      font-size: 18px;
       color: #e0f2f1;
       font-weight: 500;
       max-width: 400px;
@@ -212,13 +211,13 @@ async function handleLogin() {
       position: relative;
       z-index: 1;
       max-width: 1000px;
-      margin: 130px auto 0;
+      margin: 0 auto;
 
       .feature-card {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
         border-radius: 16px;
-        padding: 27px;
+        padding: 30px;
         transition: all 0.3s ease;
         border: 1px solid rgba(255, 255, 255, 0.1);
         text-align: center;

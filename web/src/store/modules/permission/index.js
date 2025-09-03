@@ -6,6 +6,8 @@ import api from '@/api'
 // * 后端路由相关函数
 // 根据后端传来数据构建出前端路由
 
+import RouterView from '@/components/common/RouterView.vue'
+
 function buildRoutes(routes = []) {
   return routes.map((e) => {
     const route = {
@@ -29,7 +31,8 @@ function buildRoutes(routes = []) {
         const childRoute = {
           name: e_child.name,
           path: e_child.path,
-          component: e_child.component === 'Layout' ? shallowRef(Layout) : vueModules[`/src/views${e_child.component}/index.vue`],
+          // 如果是目录类型，使用RouterView组件而不是Layout
+          component: e_child.component === 'Layout' ? shallowRef(RouterView) : vueModules[`/src/views${e_child.component}/index.vue`],
           isHidden: e_child.is_hidden,
           meta: {
             title: e_child.name,
