@@ -3,7 +3,7 @@ import RouterView from '@/components/common/RouterView.vue'
 
 export default {
   name: '清洁生产管理',
-  path: 'clean-production',  // 移除前导斜杠
+  path: '/clean-production',  // 添加前导斜杠
   component: Layout,         // 直接引用组件
   children: [
     {
@@ -42,6 +42,30 @@ export default {
                 title: '通知详情',
                 hideInMenu: true
               }
+            }
+          ]
+        },
+        {
+          name: '动态信息',
+          path: 'dynamic-info',
+          component: () => import('./policy/dynamic-info/index.vue')
+        }
+      ]
+    },
+    {
+      name: '清洁生产云审核',
+      path: 'audit',
+      component: RouterView,
+      children: [
+        {
+          name: 'PCB',
+          path: 'pcb',
+          component: RouterView,
+          children: [
+            {
+              name: '企业基本信息',
+              path: 'basic-info',
+              component: () => import('./audit/pcb/basic-info/index.vue')
             }
           ]
         }

@@ -1,67 +1,116 @@
-import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import { setupRouterGuard } from './guard'
-import { basicRoutes, EMPTY_ROUTE, NOT_FOUND_ROUTE } from './routes'
-import { getToken, isNullOrWhitespace } from '@/utils'
-import { useUserStore, usePermissionStore } from '@/store'
+import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/store'
+import { getToken } from '@/utils'
+import workbench from './modules/workbench'
+import cleanProduction from './modules/cleanProduction'
+import cloudAudit from './modules/cloudAudit'
+import technologyIntegration from './modules/technologyIntegration'
+import smartDecision from './modules/smartDecision'
+import system from './modules/system'
 
-const isHash = import.meta.env.VITE_USE_HASH === 'true'
-export const router = createRouter({
-  history: isHash ? createWebHashHistory('/') : createWebHistory('/'),
-  routes: basicRoutes,
-  scrollBehavior: () => ({ left: 0, top: 0 }),
-})
-
-export async function setupRouter(app) {
-  await addDynamicRoutes()
-  setupRouterGuard(router)
-  app.use(router)
-}
-
-export async function resetRouter() {
-  const basicRouteNames = getRouteNames(basicRoutes)
-  router.getRoutes().forEach((route) => {
-    const name = route.name
-    if (!basicRouteNames.includes(name)) {
-      router.removeRoute(name)
-    }
+// 创建路由实例的工厂函数
+function createAppRouter() {
+  return createRouter({
+    history: createWebHistory(),
+    routes: [...basicRoutes, ...businessRoutes]
   })
 }
 
-export async function addDynamicRoutes() {
-  const token = getToken()
+import Layout from '@/layout/index.vue'
 
-  // 没有token情况
-  if (isNullOrWhitespace(token)) {
-    router.addRoute(EMPTY_ROUTE)
+// 基础路由
+export const basicRoutes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { 
+      title: '登录',
+      hidden: true 
+    }
+  }
+]
+
+// 业务路由
+export const businessRoutes = [
+  workbench,
+  cleanProduction,
+  cloudAudit,
+  technologyIntegration,
+  smartDecision,
+  system
+]
+
+// 创建路由实例
+export const router = createAppRouter()
+
+// 重置路由方法
+export function resetRouter() {
+  const newRouter = createAppRouter()
+  router.matcher = newRouter.matcher
+}
+
+// 路由守卫
+router.beforeEach(async (to, from, next) => {
+  console.log('🚦 路由守卫 - 开始导航:', {
+    to: { path: to.path, name: to.name, meta: to.meta },
+    from: { path: from.path, name: from.name }
+  })
+  
+  // 设置页面标题
+  document.title = to.meta?.title ? `${to.meta.title} - 清洁生产智慧管理平台` : '清洁生产智慧管理平台'
+  
+  // 检查是否需要登录
+  const token = getToken()
+  console.log('🔑 Token状态:', {
+    exists: !!token,
+    value: token
+  })
+  
+  const userStore = useUserStore()
+  console.log('👤 用户状态:', {
+    userId: userStore.userId,
+    name: userStore.name,
+    isLoggedIn: !!userStore.userId
+  })
+
+  if (to.path === '/login') {
+    console.log('🎯 访问登录页')
+    if (token) {
+      console.log('⏩ 已登录，重定向到首页')
+      next('/')
+    } else {
+      console.log('✅ 允许访问登录页')
+      next()
+    }
     return
   }
-  // 有token的情况
-  const userStore = useUserStore()
-  const permissionStore = usePermissionStore()
-  !userStore.userId && (await userStore.getUserInfo())
-  try {
-    const accessRoutes = await permissionStore.generateRoutes()
-    await permissionStore.getAccessApis()
-    accessRoutes.forEach((route) => {
-      !router.hasRoute(route.name) && router.addRoute(route)
-    })
-    router.hasRoute(EMPTY_ROUTE.name) && router.removeRoute(EMPTY_ROUTE.name)
-    router.addRoute(NOT_FOUND_ROUTE)
-  } catch (error) {
-    console.error('error', error)
-    const userStore = useUserStore()
-    await userStore.logout()
-  }
-}
 
-export function getRouteNames(routes) {
-  return routes.map((route) => getRouteName(route)).flat(1)
-}
-
-function getRouteName(route) {
-  const names = [route.name]
-  if (route.children && route.children.length) {
-    names.push(...route.children.map((item) => getRouteName(item)).flat(1))
+  if (!token) {
+    console.log('⚠️ 未登录，重定向到登录页')
+    next('/login')
+    return
   }
-  return names
-}
+
+  // 确保用户信息已加载
+  if (!userStore.userId && token) {
+    console.log('🔄 开始加载用户信息')
+    try {
+      await userStore.getUserInfo()
+      console.log('✅ 用户信息加载成功:', {
+        userId: userStore.userId,
+        name: userStore.name
+      })
+    } catch (error) {
+      console.error('❌ 加载用户信息失败:', error)
+      next('/login')
+      return
+    }
+  }
+
+  console.log('✅ 导航通过，目标页面:', to.path)
+  next()
+})
+
+// 同时导出默认和命名导出
+export default router

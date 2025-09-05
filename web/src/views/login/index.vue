@@ -76,14 +76,18 @@
 </template>
 
 <script setup>
-import { lStorage, setToken } from '@/utils'
+import { ref, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { lStorage, setToken, getToken } from '@/utils'
 import api from '@/api'
-import { addDynamicRoutes } from '@/router'
+import { usePermissionStore, useUserStore } from '@/store'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const { query } = useRoute()
 const { t } = useI18n({ useScope: 'global' })
+const permissionStore = usePermissionStore()
+const userStore = useUserStore()
 
 const loginInfo = ref({
   username: '',
@@ -101,32 +105,112 @@ function initLoginInfo() {
 }
 
 const loading = ref(false)
-const rememberPassword = ref(false)
+const rememberPassword = ref('')
 
 function handleForgotPassword() {
   $message.info('请联系管理员重置密码')
 }
 
 async function handleLogin() {
+  console.log('🚀 开始登录流程')
   const { username, password } = loginInfo.value
+  
+  console.log('👤 检查登录信息:', { 
+    hasUsername: !!username, 
+    hasPassword: !!password 
+  })
+  
   if (!username || !password) {
+    console.log('⚠️ 用户名或密码为空')
     $message.warning(t('views.login.message_input_username_password'))
     return
   }
+  
   try {
     loading.value = true
+    console.log('🔄 发起登录请求')
     $message.loading(t('views.login.message_verifying'))
+    
     const res = await api.login({ username, password: password.toString() })
+    console.log('✅ 登录请求成功:', { 
+      username,
+      hasToken: !!res.data.access_token,
+      responseStatus: res.code,
+      tokenValue: res.data.access_token
+    })
+    
     $message.success(t('views.login.message_login_success'))
-    setToken(res.data.access_token)
-    await addDynamicRoutes()
-    if (query.redirect) {
-      const path = query.redirect
-      console.log('path', { path, query })
-      Reflect.deleteProperty(query, 'redirect')
-      router.push({ path, query })
-    } else {
-      router.push('/')
+    
+    // 保存token
+    const token = res.data.access_token
+    setToken(token)
+    console.log('💾 Token已保存:', {
+      token: token,
+      storedToken: getToken()
+    })
+    
+    try {
+      console.log('🔄 开始获取用户信息')
+      await userStore.getUserInfo()
+      console.log('✅ 用户信息获取成功:', {
+        userId: userStore.userId,
+        name: userStore.name,
+        email: userStore.email
+      })
+
+      console.log('🔄 开始获取API权限')
+      await permissionStore.getAccessApis()
+      console.log('✅ API权限获取成功:', {
+        apisCount: permissionStore.apis.length
+      })
+      
+      if (rememberPassword.value) {
+        console.log('💾 保存登录信息到本地存储')
+        lStorage.set('loginInfo', {
+          username: loginInfo.value.username,
+          password: loginInfo.value.password,
+        })
+      }
+      
+      console.log('⏳ 等待路由准备就绪')
+      await nextTick()
+      
+      const targetPath = query.redirect || '/workbench'
+      console.log('🎯 准备路由跳转:', {
+        targetPath,
+        hasRedirect: !!query.redirect,
+        currentRoute: router.currentRoute.value.fullPath
+      })
+      
+      try {
+        if (query.redirect) {
+          const path = query.redirect
+          Reflect.deleteProperty(query, 'redirect')
+          console.log('🔄 执行重定向跳转:', { path, query })
+          await router.push({ path, query })
+        } else {
+          console.log('🔄 执行工作台跳转')
+          await router.push('/workbench')
+        }
+        console.log('✅ 路由跳转完成')
+      } catch (routerError) {
+        console.error('❌ 路由跳转失败:', {
+          error: routerError,
+          message: routerError.message,
+          type: routerError.type,
+          stack: routerError.stack
+        })
+        throw routerError
+      }
+    } catch (error) {
+      console.error('❌ 登录流程失败:', {
+        error,
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+      $message.error('登录失败，请重试')
+      throw error
     }
   } catch (e) {
     console.error('login error', e.error)
@@ -149,7 +233,7 @@ async function handleLogin() {
     position: relative;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
 
     &::before {
       content: '';
@@ -170,16 +254,17 @@ async function handleLogin() {
     .platform-info {
       position: relative;
       z-index: 1;
-      margin-bottom: 60px;
+      margin-bottom: 40px;
       
       .institute-info {
         text-align: center;
 
         .institute-logo {
-          width: 100px;
-          height: 100px;
+          width: 200px;
+          height: 80px;
           margin-bottom: 30px;
           filter: brightness(1.1);
+          object-fit: contain;
         }
 
         .platform-title {
@@ -194,14 +279,15 @@ async function handleLogin() {
 
     .institute-name {
       position: absolute;
-      bottom: 40px;
-      left: 40px;
-      font-size: 18px;
+      bottom: 20px;
+      left: 20px;
+      font-size: 14px;
       color: #e0f2f1;
-      font-weight: 500;
-      max-width: 400px;
-      line-height: 1.5;
+      font-weight: 400;
+      max-width: 350px;
+      line-height: 1.4;
       z-index: 2;
+      opacity: 0.8;
     }
 
     .feature-cards {
@@ -212,6 +298,7 @@ async function handleLogin() {
       z-index: 1;
       max-width: 1000px;
       margin: 0 auto;
+      margin-top: 100px;
 
       .feature-card {
         background: rgba(255, 255, 255, 0.1);
@@ -221,6 +308,7 @@ async function handleLogin() {
         transition: all 0.3s ease;
         border: 1px solid rgba(255, 255, 255, 0.1);
         text-align: center;
+        margin-top: -15px;
 
         &:hover {
           transform: translateY(-10px);
@@ -321,9 +409,9 @@ async function handleLogin() {
       }
 
       .institute-name {
-        bottom: 30px;
-        left: 30px;
-        font-size: 16px;
+        bottom: 15px;
+        left: 15px;
+        font-size: 12px;
       }
     }
   }

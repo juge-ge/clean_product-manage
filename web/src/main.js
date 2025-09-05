@@ -4,7 +4,7 @@ import 'uno.css'
 import '@/styles/global.scss'
 
 import { createApp } from 'vue'
-import { setupRouter } from '@/router'
+import { setupRouter } from '@/router/setup'
 import { setupStore } from '@/store'
 import App from './App.vue'
 import { setupDirectives } from './directives'

@@ -1,6 +1,6 @@
 import { lStorage } from '@/utils'
 
-const TOKEN_CODE = 'access_token'
+const TOKEN_CODE = 'token'
 
 export function getToken() {
   return lStorage.get(TOKEN_CODE)

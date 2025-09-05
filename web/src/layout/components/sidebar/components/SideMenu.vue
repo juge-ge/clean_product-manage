@@ -13,18 +13,18 @@
 </template>
 
 <script setup>
-import { usePermissionStore, useAppStore } from '@/store'
+import { useAppStore } from '@/store'
 import { renderCustomIcon, renderIcon, isExternal } from '@/utils'
+import { businessRoutes } from '@/router'
 
 const router = useRouter()
 const curRoute = useRoute()
-const permissionStore = usePermissionStore()
 const appStore = useAppStore()
 
 const activeKey = computed(() => curRoute.meta?.activeMenu || curRoute.name)
 
 const menuOptions = computed(() => {
-  return permissionStore.menus.map((item) => getMenuItem(item)).sort((a, b) => a.order - b.order)
+  return businessRoutes.map((item) => getMenuItem(item)).sort((a, b) => (a.order || 0) - (b.order || 0))
 })
 
 const menu = ref(null)
@@ -46,7 +46,7 @@ function resolvePath(basePath, path) {
 
 function getMenuItem(route, basePath = '') {
   let menuItem = {
-    label: (route.meta && route.meta.title) || route.name,
+    label: route.meta?.title || route.name,
     key: route.name,
     path: resolvePath(basePath, route.path),
     icon: getIcon(route.meta),
@@ -54,7 +54,7 @@ function getMenuItem(route, basePath = '') {
   }
 
   const visibleChildren = route.children
-    ? route.children.filter((item) => item.name && !item.isHidden)
+    ? route.children.filter((item) => item.name && !item.meta?.hidden)
     : []
 
   if (!visibleChildren.length) return menuItem
@@ -68,9 +68,10 @@ function getMenuItem(route, basePath = '') {
       key: singleRoute.name,
       path: resolvePath(menuItem.path, singleRoute.path),
       icon: getIcon(singleRoute.meta),
+      order: singleRoute.meta?.order || 0,
     }
     const visibleItems = singleRoute.children
-      ? singleRoute.children.filter((item) => item.name && !item.isHidden)
+      ? singleRoute.children.filter((item) => item.name && !item.meta?.hidden)
       : []
 
     if (visibleItems.length === 1) {
@@ -78,12 +79,12 @@ function getMenuItem(route, basePath = '') {
     } else if (visibleItems.length > 1) {
       menuItem.children = visibleItems
         .map((item) => getMenuItem(item, menuItem.path))
-        .sort((a, b) => a.order - b.order)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
     }
   } else {
     menuItem.children = visibleChildren
       .map((item) => getMenuItem(item, menuItem.path))
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
   }
   return menuItem
 }
