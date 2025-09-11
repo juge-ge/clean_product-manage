@@ -2,7 +2,7 @@
   <div class="scheme-library">
     <n-card title="清洁生产方案库">
       <template #header-extra>
-        <n-button type="primary" @click="showAddModal = true">
+        <n-button type="primary" @click="handleAddClick">
           <template #icon>
             <TheIcon icon="carbon:add" />
           </template>
@@ -16,11 +16,17 @@
         :query-items="queryItems"
       >
         <template #queryBar>
-          <QueryBarItem label="指标名称">
-            <n-input v-model:value="queryItems.indicatorName" placeholder="请输入指标名称" />
+          <QueryBarItem label="方案名称">
+            <n-input v-model:value="queryItems.name" placeholder="请输入方案名称" />
           </QueryBarItem>
-          <QueryBarItem label="方案类型">
-            <n-select v-model:value="queryItems.schemeType" :options="schemeTypeOptions" />
+          <QueryBarItem label="关联指标">
+            <n-tree-select 
+              v-model:value="queryItems.indicatorIds"
+              :options="indicatorTreeOptions"
+              multiple
+              checkable
+              placeholder="请选择关联指标"
+            />
           </QueryBarItem>
         </template>
       </CrudTable>
@@ -32,65 +38,7 @@
       :title="isEdit ? '编辑方案' : '添加方案'"
       @save="handleSaveScheme"
     >
-      <n-form ref="schemeFormRef" :model="schemeForm" :rules="schemeRules">
-        <n-form-item label="指标名称" path="indicatorName">
-          <n-input v-model:value="schemeForm.indicatorName" placeholder="请输入指标名称" />
-        </n-form-item>
-        <n-form-item label="方案类型" path="schemeType">
-          <n-select
-            v-model:value="schemeForm.schemeType"
-            :options="schemeTypeOptions"
-            placeholder="请选择方案类型"
-          />
-        </n-form-item>
-        <n-form-item label="方案标题" path="title">
-          <n-input v-model:value="schemeForm.title" placeholder="请输入方案标题" />
-        </n-form-item>
-        <n-form-item label="方案描述" path="description">
-          <n-input
-            v-model:value="schemeForm.description"
-            type="textarea"
-            placeholder="请输入方案描述"
-            :rows="3"
-          />
-        </n-form-item>
-        <n-form-item label="实施方案" path="implementation">
-          <n-input
-            v-model:value="schemeForm.implementation"
-            type="textarea"
-            placeholder="请输入实施方案"
-            :rows="4"
-          />
-        </n-form-item>
-        <n-form-item label="预期效果" path="expectedEffect">
-          <n-input
-            v-model:value="schemeForm.expectedEffect"
-            type="textarea"
-            placeholder="请输入预期效果"
-            :rows="3"
-          />
-        </n-form-item>
-        <n-form-item label="投资估算" path="investment">
-          <n-input-number
-            v-model:value="schemeForm.investment"
-            placeholder="请输入投资估算"
-            :min="0"
-            :precision="2"
-          >
-            <template #suffix>万元</template>
-          </n-input-number>
-        </n-form-item>
-        <n-form-item label="投资回收期" path="paybackPeriod">
-          <n-input-number
-            v-model:value="schemeForm.paybackPeriod"
-            placeholder="请输入投资回收期"
-            :min="0"
-            :precision="1"
-          >
-            <template #suffix>年</template>
-          </n-input-number>
-        </n-form-item>
-      </n-form>
+      <SchemeForm ref="schemeFormRef" :data="currentScheme" />
     </CrudModal>
 
     <!-- 模块导航按钮 -->
@@ -114,20 +62,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, h } from 'vue'
 import { 
   NCard, 
   NButton, 
-  NForm, 
-  NFormItem,
   NInput,
-  NInputNumber,
-  NSelect
+  NTreeSelect,
+  NSpace
 } from 'naive-ui'
 import TheIcon from '@/components/icon/TheIcon.vue'
 import CrudTable from '@/components/table/CrudTable.vue'
 import CrudModal from '@/components/table/CrudModal.vue'
 import QueryBarItem from '@/components/query-bar/QueryBarItem.vue'
+import SchemeForm from './components/SchemeForm.vue'
 import { mockDetailApi } from '@/mock/pcb-detail'
 
 defineOptions({ name: '方案库' })
@@ -144,59 +91,94 @@ const emit = defineEmits(['update', 'navigate'])
 // 数据状态
 const showAddModal = ref(false)
 const isEdit = ref(false)
+const schemeFormRef = ref(null)
+const currentScheme = ref({})
+
 const queryItems = ref({
-  indicatorName: '',
-  schemeType: null
+  name: '',
+  indicatorIds: []
 })
 
-// 表单数据
-const schemeForm = ref({
-  indicatorName: '',
-  schemeType: null,
-  title: '',
-  description: '',
-  implementation: '',
-  expectedEffect: '',
-  investment: null,
-  paybackPeriod: null
-})
-
-// 选项数据
-const schemeTypeOptions = [
-  { label: '节能降耗', value: '节能降耗' },
-  { label: '污染防治', value: '污染防治' },
-  { label: '资源综合利用', value: '资源综合利用' },
-  { label: '工艺改进', value: '工艺改进' },
-  { label: '设备更新', value: '设备更新' }
-]
+// 指标树选项
+const indicatorTreeOptions = ref([
+  {
+    label: '生产工艺与装备要求',
+    key: 'process',
+    children: [
+      { label: '刚性单面板生产工艺', key: '1' },
+      { label: '刚性双面板生产工艺', key: '2' },
+      { label: '刚性多层板生产工艺', key: '3' },
+      { label: '挠性单面板生产工艺', key: '4' },
+      { label: '挠性双面板生产工艺', key: '5' },
+      { label: '挠性多层板生产工艺', key: '6' }
+    ]
+  },
+  {
+    label: '资源能源消耗',
+    key: 'resource',
+    children: [
+      { label: '单位产品电耗', key: '7' },
+      { label: '单位产品新鲜水耗', key: '15' },
+      { label: '水资源重复利用率', key: '19' },
+      { label: '覆铜板利用率', key: '20' },
+      { label: '金属铜回收率', key: '28' }
+    ]
+  },
+  {
+    label: '污染防治',
+    key: 'pollution',
+    children: [
+      { label: '一般工业固体废物综合利用率', key: '29' },
+      { label: '污染物产生量', key: '30' },
+      { label: '污染治理设施', key: '42' }
+    ]
+  },
+  {
+    label: '环境管理',
+    key: 'management',
+    children: [
+      { label: '温室气体排放', key: '47' },
+      { label: '产品特征', key: '50' },
+      { label: '环保法律法规执行情况', key: '54' },
+      { label: '清洁生产审核', key: '57' },
+      { label: '节能管理', key: '58' }
+    ]
+  }
+])
 
 // 表格列配置
 const schemeColumns = [
   {
-    title: '指标名称',
-    key: 'indicatorName',
-    width: 150
+    title: '方案名称',
+    key: 'name',
+    width: 200,
+    ellipsis: { tooltip: true }
   },
   {
     title: '方案类型',
-    key: 'schemeType',
+    key: 'type',
     width: 120,
     render: (row) => {
-      return h('n-tag', { type: 'info' }, row.schemeType)
+      return h('n-tag', { type: 'info' }, row.type)
     }
   },
   {
-    title: '方案标题',
-    key: 'title',
-    width: 200,
-    ellipsis: { tooltip: true }
+    title: '关联指标',
+    key: 'indicatorIds',
+    width: 150,
+    render: (row) => {
+      if (row.indicatorIds && row.indicatorIds.length > 0) {
+        return h('n-tag', { type: 'default' }, `${row.indicatorIds.length}个指标`)
+      }
+      return '-'
+    }
   },
   {
     title: '投资估算',
     key: 'investment',
     width: 120,
     render: (row) => {
-      return h('span', `${row.investment}万元`)
+      return h('span', `${row.investment || 0}万元`)
     }
   },
   {
@@ -204,7 +186,7 @@ const schemeColumns = [
     key: 'paybackPeriod',
     width: 120,
     render: (row) => {
-      return h('span', `${row.paybackPeriod}年`)
+      return h('span', `${row.paybackPeriod || 0}年`)
     }
   },
   {
@@ -213,9 +195,8 @@ const schemeColumns = [
     width: 100,
     render: (row) => {
       const statusMap = {
-        pending: { type: 'default', text: '待实施' },
-        'in-progress': { type: 'info', text: '实施中' },
-        completed: { type: 'success', text: '已完成' }
+        active: { type: 'success', text: '启用' },
+        inactive: { type: 'default', text: '禁用' }
       }
       const status = statusMap[row.status] || { type: 'default', text: '未知' }
       return h('n-tag', { type: status.type }, status.text)
@@ -242,42 +223,42 @@ const schemeColumns = [
   }
 ]
 
-// 表单验证规则
-const schemeRules = {
-  indicatorName: { required: true, message: '请输入指标名称', trigger: 'blur' },
-  schemeType: { required: true, message: '请选择方案类型', trigger: 'change' },
-  title: { required: true, message: '请输入方案标题', trigger: 'blur' },
-  description: { required: true, message: '请输入方案描述', trigger: 'blur' },
-  implementation: { required: true, message: '请输入实施方案', trigger: 'blur' },
-  expectedEffect: { required: true, message: '请输入预期效果', trigger: 'blur' },
-  investment: { required: true, message: '请输入投资估算', trigger: 'change' },
-  paybackPeriod: { required: true, message: '请输入投资回收期', trigger: 'change' }
-}
-
 // 获取方案列表
 const getSchemeList = async (params) => {
   try {
-    const response = await mockDetailApi.getSchemes(props.enterpriseId)
+    const response = await mockDetailApi.getSchemes(props.enterpriseId, params)
     return response.data
   } catch (error) {
     console.error('获取方案列表失败:', error)
     window.$message.error('获取方案列表失败')
-    return []
+    return { list: [], total: 0 }
+  }
+}
+
+// 获取指标树数据
+const fetchIndicatorTree = async () => {
+  try {
+    const response = await mockDetailApi.getIndicatorTree()
+    indicatorTreeOptions.value = response.data
+  } catch (error) {
+    console.error('获取指标树失败:', error)
   }
 }
 
 // 保存方案
 const handleSaveScheme = async () => {
   try {
+    const formData = await schemeFormRef.value.validate()
     if (isEdit.value) {
-      await mockDetailApi.updateScheme(props.enterpriseId, schemeForm.value.id, schemeForm.value)
+      await mockDetailApi.updateScheme(props.enterpriseId, currentScheme.value.id, formData)
       window.$message.success('方案更新成功')
     } else {
-      await mockDetailApi.createScheme(props.enterpriseId, schemeForm.value)
+      await mockDetailApi.createScheme(props.enterpriseId, formData)
       window.$message.success('方案添加成功')
     }
     showAddModal.value = false
-    emit('update', schemeForm.value)
+    resetForm()
+    emit('update', formData)
   } catch (error) {
     console.error('保存方案失败:', error)
     window.$message.error('保存方案失败')
@@ -287,7 +268,7 @@ const handleSaveScheme = async () => {
 // 编辑方案
 const editScheme = (scheme) => {
   isEdit.value = true
-  schemeForm.value = { ...scheme }
+  currentScheme.value = { ...scheme }
   showAddModal.value = true
 }
 
@@ -308,6 +289,18 @@ const deleteScheme = async (schemeId) => {
   }
 }
 
+// 重置表单
+const resetForm = () => {
+  isEdit.value = false
+  currentScheme.value = {}
+}
+
+// 处理添加按钮点击
+const handleAddClick = () => {
+  resetForm()
+  showAddModal.value = true
+}
+
 // 导航方法
 const goToPrevious = () => {
   emit('navigate', 'audit')
@@ -318,7 +311,7 @@ const goToNext = () => {
 }
 
 onMounted(() => {
-  // 初始化数据
+  fetchIndicatorTree()
 })
 </script>
 

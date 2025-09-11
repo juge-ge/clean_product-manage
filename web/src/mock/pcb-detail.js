@@ -204,15 +204,100 @@ export const mockDetailApi = {
 
   // 审核结果相关
   getAuditResults: (enterpriseId) => {
-    return Promise.resolve({ data: mockAuditResults })
+    return Promise.resolve({
+      data: [
+        {
+          id: 1,
+          name: '刚性单面板生产工艺',
+          category: '生产工艺与装备要求',
+          type: 'qualitative',
+          level: null,
+          score: 0,
+          recommendedSchemes: []
+        },
+        {
+          id: 2,
+          name: '刚性双面板生产工艺',
+          category: '生产工艺与装备要求',
+          type: 'qualitative',
+          level: null,
+          score: 0,
+          recommendedSchemes: []
+        },
+        {
+          id: 7,
+          name: '单位产品电耗',
+          category: '资源能源消耗',
+          type: 'quantitative',
+          currentValue: 120,
+          unit: 'kWh/m²',
+          level: 'II级',
+          score: 80,
+          recommendedSchemes: []
+        },
+        {
+          id: 54,
+          name: '环保法律法规执行情况',
+          category: '环境管理',
+          type: 'limiting',
+          level: null,
+          score: 0,
+          recommendedSchemes: []
+        }
+      ]
+    })
   },
   submitAuditResults: (enterpriseId, data) => {
     return Promise.resolve({ data: { ...mockAuditResults, ...data } })
   },
 
   // 整改方案相关
-  getSchemes: (enterpriseId) => {
-    return Promise.resolve({ data: mockSchemes })
+  getSchemes: (enterpriseId, params = {}) => {
+    const schemes = [
+      {
+        id: 1,
+        name: '废水深度处理回用系统改造',
+        type: '污染防治',
+        description: '更换超滤和反渗透膜组件，安装在线水质监测设备',
+        implementation: '1. 更换超滤膜组件\n2. 安装反渗透设备\n3. 建设在线监测系统',
+        expectedEffect: '每万平米节约新鲜水成本1.6万元，减少废水排放850吨',
+        investment: 200,
+        paybackPeriod: 2.5,
+        indicatorIds: ['15', '19', '30', '42'],
+        status: 'active'
+      },
+      {
+        id: 2,
+        name: '镀铜生产线智能化改造',
+        type: '工艺改进',
+        description: '引进垂直连续电镀(VCP)设备替代传统龙门式镀铜线',
+        implementation: '1. 引进VCP设备\n2. 优化工艺参数\n3. 培训操作人员',
+        expectedEffect: '每万平米节约原材料成本3.5万元，减少废水产生100吨',
+        investment: 500,
+        paybackPeriod: 4,
+        indicatorIds: ['1', '6', '7', '9', '20', '28'],
+        status: 'active'
+      }
+    ]
+
+    let filteredSchemes = schemes
+    if (params.name) {
+      filteredSchemes = filteredSchemes.filter(scheme => 
+        scheme.name.includes(params.name)
+      )
+    }
+    if (params.indicatorIds && params.indicatorIds.length > 0) {
+      filteredSchemes = filteredSchemes.filter(scheme =>
+        scheme.indicatorIds.some(id => params.indicatorIds.includes(id))
+      )
+    }
+
+    return Promise.resolve({
+      data: {
+        list: filteredSchemes,
+        total: filteredSchemes.length
+      }
+    })
   },
   createScheme: (enterpriseId, data) => {
     const newScheme = {
@@ -243,5 +328,92 @@ export const mockDetailApi = {
         content: data
       }
     })
+  },
+
+  // 保存预审核数据
+  savePreAuditData: (enterpriseId, data) => {
+    return Promise.resolve({
+      message: '预审核数据保存成功',
+      data: data
+    })
+  },
+
+  // 获取推荐方案
+  getRecommendedSchemes: (enterpriseId, indicatorId) => {
+    return Promise.resolve({
+      data: [
+        {
+          id: 1,
+          name: '电镀线节能改造',
+          description: '更换高效整流器，降低电能消耗'
+        },
+        {
+          id: 2,
+          name: '废水深度处理系统',
+          description: '安装膜分离设备，提高水回用率'
+        }
+      ]
+    })
+  },
+
+  // 获取指标树
+  getIndicatorTree: () => {
+    return Promise.resolve({
+      data: [
+        {
+          label: '生产工艺与装备要求',
+          key: 'process',
+          children: [
+            { label: '刚性单面板生产工艺', key: '1' },
+            { label: '刚性双面板生产工艺', key: '2' },
+            { label: '刚性多层板生产工艺', key: '3' },
+            { label: '挠性单面板生产工艺', key: '4' },
+            { label: '挠性双面板生产工艺', key: '5' },
+            { label: '挠性多层板生产工艺', key: '6' }
+          ]
+        },
+        {
+          label: '资源能源消耗',
+          key: 'resource',
+          children: [
+            { label: '单位产品电耗', key: '7' },
+            { label: '单位产品新鲜水耗', key: '15' },
+            { label: '水资源重复利用率', key: '19' },
+            { label: '覆铜板利用率', key: '20' },
+            { label: '金属铜回收率', key: '28' }
+          ]
+        },
+        {
+          label: '污染防治',
+          key: 'pollution',
+          children: [
+            { label: '一般工业固体废物综合利用率', key: '29' },
+            { label: '污染物产生量', key: '30' },
+            { label: '污染治理设施', key: '42' }
+          ]
+        },
+        {
+          label: '环境管理',
+          key: 'management',
+          children: [
+            { label: '温室气体排放', key: '47' },
+            { label: '产品特征', key: '50' },
+            { label: '环保法律法规执行情况', key: '54' },
+            { label: '清洁生产审核', key: '57' },
+            { label: '节能管理', key: '58' }
+          ]
+        }
+      ]
+    })
+  },
+
+  // 删除方案
+  deleteScheme: (enterpriseId, schemeId) => {
+    const index = mockSchemes.findIndex(s => s.id === schemeId)
+    if (index !== -1) {
+      mockSchemes.splice(index, 1)
+      return Promise.resolve({ message: '方案删除成功' })
+    }
+    return Promise.reject(new Error('方案不存在'))
   }
 }

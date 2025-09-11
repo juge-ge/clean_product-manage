@@ -1,0 +1,278 @@
+
+---
+# PCB模块内容指南.md
+
+## 引言
+
+本文档是 **PCB行业清洁生产云审核模块** 的前端实施详细指南，旨在将《PCB模块技术方案.md》中的宏观设计，结合《PCB模块.xlsx》、《审核核心逻辑.xlsx》等业务数据，转化为具体、可执行的前端开发任务。
+
+本文档严格遵循以下原则：
+- **技术栈**：Vue 3 + Composition API + Naive UI + Vite。
+- **架构**：完全前后端解耦，所有数据通过 `src/api/modules/pcb.js` 中定义的API接口进行交互。
+- **组件化**：优先复用通用组件，并为PCB模块创建专用、可复用的业务组件。
+
+---
+
+## 1. 预审核 (Pre-Audit) 模块实施指南
+
+### 1.1 功能定位与目标
+此模块的核心是**数据采集**。前端需提供一个与《PCB模块.xlsx》内容完全匹配、结构清晰、易于填写的界面，让企业或审核员能够准确无误地录入所有现状信息。
+
+### 1.2 页面布局与组件规划 (`pre-audit.vue`)
+为避免单一巨大表单带来的压迫感和不良体验，页面将采用 `n-card` 结合 `n-collapse` (折叠面板) 的布局方式。每个主要模块（如“企业总体生产情况”）作为一个可独立折叠的卡片。
+
+```vue
+<!-- web/src/views/cloud-audit/pcb/enterprise-detail/pre-audit.vue -->
+<template>
+  <div class="pre-audit-page p-4">
+    <n-spin :show="loading">
+      <n-form ref="formRef" :model="formData">
+        <n-collapse default-expanded-names="1" accordion>
+          <n-collapse-item title="1. 企业总体生产情况" name="1">
+            <ProductionInfoForm v-model="formData.productionInfo" />
+          </n-collapse-item>
+          <n-collapse-item title="2. 原辅材料使用情况" name="2">
+            <RawMaterialForm v-model="formData.rawMaterials" />
+          </n-collapse-item>
+          <n-collapse-item title="3. 主要工艺及装备使用" name="3">
+            <ProcessEquipmentForm v-model="formData.processEquipment" />
+          </n-collapse-item>
+          <n-collapse-item title="4. 资源能源消耗" name="4">
+            <ResourceConsumptionForm v-model="formData.resourceConsumption" />
+          </n-collapse-item>
+          <n-collapse-item title="5. 污染防治" name="5">
+            <PollutionControlForm v-model="formData.pollutionControl" />
+          </n-collapse-item>
+          <n-collapse-item title="6. 工业固体废物管理" name="6">
+            <SolidWasteForm v-model="formData.solidWaste" />
+          </n-collapse-item>
+          <n-collapse-item title="7. 自行监测情况" name="7">
+            <SelfMonitoringForm v-model="formData.selfMonitoring" />
+          </n-collapse-item>
+        </n-collapse>
+      </n-form>
+      <n-space justify="center" class="mt-6">
+        <n-button @click="handleSaveDraft">保存草稿</n-button>
+        <n-button type="primary" @click="handleSubmit">提交审核</n-button>
+      </n-space>
+    </n-spin>
+  </div>
+</template>
+```
+
+### 1.3 核心数据填报模块详解
+
+以下是各子表单组件的具体实现指南。
+
+#### 1.3.1 企业总体生产情况 (`ProductionInfoForm.vue`)
+此模块包含产能和按年、按类型细分的产量，数据结构有嵌套。
+
+- **UI实现**:
+  - “产能”使用 `n-input-number`。
+  - “产量”部分，使用 `n-tabs` 按年份（2022, 2023, 2024）切换。每个标签页内是一个表单，使用 `n-grid` 布局，左侧为生产类型，右侧为 `n-input-number` 用于填写产量。
+
+- **数据模型 (`formData.productionInfo`):**
+  ```javascript
+  {
+    capacity: null, // 产能
+    output: {
+      '2022': { rigidSingle: null, rigidDouble: null, ... },
+      '2023': { rigidSingle: null, rigidDouble: null, ... },
+      '2024': { rigidSingle: null, rigidDouble: null, ... }
+    }
+  }
+  ```
+
+#### 1.3.2 原辅材料使用情况 (`RawMaterialForm.vue`)
+此模块是典型的动态表格，用户可以按需增删数据行。
+
+- **UI实现**:
+  - 使用 `n-data-table` 实现可编辑表格。利用 `render` 函数将 `n-input`, `n-select`, `n-input-number` 嵌入单元格内，实现行内编辑。
+  - 表格下方提供“添加一行”按钮，动态向 `v-model` 数组 `push` 一个新对象。
+  - 每一行末尾提供“删除”按钮，从数组中 `splice` 对应行的数据。
+
+- **数据模型 (`formData.rawMaterials`):**
+  ```javascript
+  [
+    { year: 2023, name: '覆铜板', unit: 'm²', process: '开料', amount: 130000, state: '固体', voc: 0 },
+    // ...更多行
+  ]
+  ```
+
+#### 1.3.3 主要工艺及装备使用 (`ProcessEquipmentForm.vue`)
+此模块结构复杂，包含两级分类（刚性/挠性 -> 单面/双面...）。
+
+- **UI实现**:
+  - 外层使用 `n-tabs` 区分“刚性印制电路板”和“挠性印制板”。
+  - 每个标签页内，使用 `n-card` 或 `n-collapse-item` 展示每个子类型（单面板、双面板等）。
+  - 每个卡片内包含“产线”、“工序”、“设备”三个 `n-input` 文本域供用户填写。
+
+- **数据模型 (`formData.processEquipment`):**
+  ```javascript
+  {
+    rigid: {
+      single: { line: '', process: '', equipment: '' },
+      double: { line: '', process: '', equipment: '' },
+      // ...
+    },
+    flexible: {
+      single: { line: '', process: '', equipment: '' },
+      // ...
+    }
+  }
+  ```
+
+#### 1.3.4 资源能源消耗 (`ResourceConsumptionForm.vue`)
+- **UI实现**: 与“产量”类似，使用 `n-tabs` 按“水”、“电”、“气”分类。每个标签页内再使用 `n-tabs` 或动态表单按年份填报。
+- **数据模型 (`formData.resourceConsumption`):**
+  ```javascript
+  {
+    water: [ { year: 2023, type: '市政自来水', amount: 300000, source: '市政管网' } ],
+    electricity: [ { year: 2023, type: '市电', amount: 2160000, source: '国家电网' } ],
+    gas: []
+  }
+  ```
+
+#### 1.3.5 污染防治 (`PollutionControlForm.vue`)
+- **UI实现**: 包含多个子模块，如“金属铜回收量”、“工业用水重复利用率”等。
+  - **回收量/利用率**: 使用动态表格按年份填报。
+  - **废气/废水排放**: 使用动态可编辑表格，列头为“工艺名称”、“分类”、“处理方式”。
+- **数据模型 (`formData.pollutionControl`):**
+  ```javascript
+  {
+    copperRecovery: [ { year: 2023, amount: 50 } ],
+    waterReuseRate: [ { year: 2023, rate: 52 } ],
+    gasEmission: [ { process: '蚀刻', category: '酸性废气', method: '碱液喷淋' } ],
+    waterEmission: [ { process: '电镀', category: '含铜废水', method: '化学沉淀' } ]
+  }
+  ```
+  
+#### 1.3.6 工业固体废物管理 (`SolidWasteForm.vue`)
+- **UI实现**: 使用 `n-tabs` 区分“一般固废”和“危险废物”。每个标签页内是动态可编辑表格。
+- **数据模型 (`formData.solidWaste`):**
+  ```javascript
+  {
+    general: [ { year: 2023, name: '废覆铜板边角料', type: 'HW49', amount: 10 } ],
+    hazardous: [ { year: 2023, name: '废蚀刻液', type: 'HW17', code: '336-064-17', amount: 25 } ]
+  }
+  ```
+
+#### 1.3.7 自行监测情况 (`SelfMonitoringForm.vue`)
+- **UI实现**: 每个监测类别（有组织废气、废水等）使用一个 `n-card`。卡片内是表单，并提供**文件上传组件** (`n-upload`) 用于关联监测报告。
+- **数据模型 (`formData.selfMonitoring`):**
+  ```javascript
+  {
+    organizedGas: { item: 'VOCs', concentration: 30, point: 'RTO出口', standard: 'DB32/4041-2021', reportFileId: 'uuid-xxx' },
+    // ...
+  }
+  ```
+---
+
+## 2. 审核 (Audit) 模块实施指南
+
+### 2.1 功能定位与目标
+此模块是审核工作的核心，实现**数据对标、自动评估、人工复核、方案推荐**的闭环。
+
+### 2.2 页面布局与核心组件 (`audit.vue`)
+- **顶部**: `n-card` 显示审核结果汇总，包括总分、综合等级和 ECharts 绘制的雷达图。
+- **主体**: `n-data-table` 以树形结构展示全部64项指标及其审核情况。
+
+```vue
+<!-- web/src/views/cloud-audit/pcb/enterprise-detail/audit.vue -->
+<template>
+  <div class="audit-page p-4">
+    <n-card title="审核结果总览" class="mb-4">
+      <!-- 汇总统计 -->
+      <n-grid :cols="4" :x-gap="16" class="mb-4">
+        <n-gi><n-statistic label="最终得分" :value="summary.totalScore.toFixed(2)" /></n-gi>
+        <n-gi><n-statistic label="综合等级"><n-tag :type="getLevelTagType(summary.overallLevel)">{{ summary.overallLevel }}</n-tag></n-statistic></n-gi>
+        <n-gi><n-statistic label="待改进项数" :value="summary.improvementItems" /></n-gi>
+      </n-grid>
+      <!-- ECharts 雷达图 -->
+      <div ref="radarChart" style="width: 100%; height: 300px;"></div>
+    </n-card>
+
+    <!-- 详细审核表 -->
+    <n-data-table
+      :columns="columns"
+      :data="auditTreeData"
+      :row-key="row => row.id"
+      default-expand-all
+    />
+    
+    <!-- 推荐方案弹窗 -->
+    <n-modal v-model:show="showSchemeModal">
+      <n-card style="width: 600px" title="推荐改进方案">
+        <div v-for="scheme in currentSchemes" :key="scheme.id" class="mb-2">
+          <strong>{{ scheme.name }}:</strong> {{ scheme.description }}
+        </div>
+      </n-card>
+    </n-modal>
+  </div>
+</template>
+```
+
+### 2.3 全指标审核逻辑详解
+系统通过 `processAuditData` 函数在前端完成大部分计算和评级逻辑，将结果渲染到表格中。
+
+| 序号 | 指标名称 | 审核类型 | **系统审核方法与界面交互** |
+| :--- | :--- | :--- | :--- |
+| 1-6 | **生产工艺与装备要求** | 定性判断 | **界面**: 审核员在表格行内看到一个 `n-select` 组件，选项为 [I级, II级, III级, 不达标]。每个选项旁有 `n-tooltip` 提示该等级的具体文本描述。<br>**逻辑**: 审核员根据材料和现场情况手动选择等级。 |
+| 7-14 | **单位产品电耗** | 定量计算与自动评估 | **界面**: “现状值”列自动显示计算结果 (如 `18 kWh/m²`)。“等级”列自动显示评级结果 (如 `<n-tag type="info">II级</n-tag>`)。<br>**逻辑**: 前端JS函数根据预审核数据中的总产量和总电耗，区分产品类型，自动计算单耗并与该指标的 I/II/III 级阈值比较，得出等级。公式：`≤` 为优。 |
+| 15-18 | **单位产品新鲜水耗** | 定量计算与自动评估 | **同上**，使用总新鲜水用量和总产量进行计算。 |
+| 19 | **水资源重复利用率** | 定量自动评估 | **界面**: “现状值”列直接显示预审核填报的百分比 (如 `52%`)。“等级”列自动显示评级。<br>**逻辑**: 直接将现状值与阈值比较。公式：`≥` 为优。 |
+| 20-27 | **覆铜板利用率** | 定量计算与自动评估 | **界面**: “现状值”列显示自动计算的百分比。<br>**逻辑**: `(净用量 / 总投入量) * 100%`，然后与阈值比较。公式：`≥` 为优。 |
+| 28 | **金属铜回收率** | 定量自动评估 | **同上**，根据预审核数据计算并评级。公式：`≥` 为优。 |
+| 29 | **一般工业固体废物综合利用率** | 定量自动评估 | **同上**，根据预审核数据计算并评级。公式：`≥` 为优。 |
+| 30-41 | **污染物产生量** | 定量计算与自动评估 | **同上**，根据总产生量和总产量计算单位产品产生量，并与阈值比较。公式：`≤` 为优。 |
+| 42-46 | **污染治理设施** | 定性判断 | **界面**: 与指标1-6类似，提供 `n-select` 供审核员选择。<br>**逻辑**: 审核员基于上传的监测报告和现场照片进行判断。 |
+| 47-49 | **温室气体排放** | 定量/定性混合评估 | - **指标47**: `n-select`，选项为[已开展碳足迹评价和碳盘查(I级), 已开展碳盘查(II级), 未开展]。<br>- **指标48**: `n-select`，选项为[近三年持续改善(I级), 与上年相比改善(II级), 其他(III级)]。<br>- **指标49**: 自动计算 `(年碳排放量 / 年产值)` 并与阈值比较评级。 |
+| 50-53 | **产品特征** | 定性判断 (符合性检查) | **界面**: 提供 `n-checkbox-group` 或多个 `n-switch`，对应每个要求（如“不使用HCFCs”、“包装减量化”）。<br>**逻辑**: 审核员逐项勾选。系统根据勾选情况综合判断等级。 |
+| 54 | **\*环保法律法规执行情况** | 限定性指标 (一票否决) | **界面**: 一个 `n-switch` 开关，标签为“符合国家和地方所有相关法律法规”。旁边有文件链接，可查看企业上传的许可证等。<br>**逻辑**: 如果审核员关闭此开关，系统会弹出 `n-modal` 要求确认，并**在总览卡片处高亮警告**：“存在限定性指标不达标，总评级不得高于III级”。 |
+| 55, 60, 62 | **\*其他限定性指标** | 限定性指标 | **界面与逻辑**: 同上，均为 `n-switch` 和对应的否决逻辑。 |
+| 56, 59, 61, 63 | **其他定性管理指标** | 定性判断 | **界面与逻辑**: 与指标1-6类似，提供 `n-select` 供审核员选择等级。 |
+| 57-58 | **清洁生产审核/节能管理** | 定量/定性混合评估 | **界面**: `n-input-number` 用于输入实施率/完成率。<br>**逻辑**: 输入值后，系统根据 `≥90%`, `≥70%`, `≥50%` 的阈值自动评定为I/II/III级。 |
+| 64 | **运输方式** | 定量/定性混合评估 | **界面**: `n-input-number` 用于输入新能源车比例。<br>**逻辑**: 系统根据输入的比例自动评级。 |
+
+### 2.4 改进措施推荐与交互
+- **UI实现**: 在 `n-data-table` 的 `columns` 定义中，为“操作”列添加一个条件渲染的按钮。
+- **逻辑**:
+  1.  在 `processAuditData` 逻辑中，如果一个指标的评级不是 `I级`，则从后端获取的“指标-方案”映射关系中，找出所有关联的方案ID和名称，存入该行数据的 `recommendedSchemes` 数组中。
+  2.  当用户点击“推荐方案”按钮时，触发一个函数 `showSchemeModal(row.recommendedSchemes)`。
+  3.  此函数将方案列表赋值给一个 ref (`currentSchemes`)，并设置 `showSchemeModal` 为 `true`，从而弹窗显示方案列表。
+
+---
+
+## 3. 方案库 (Scheme Library) 模块实施指南
+
+### 3.1 功能定位与目标
+建立一个可维护的、与评价指标强关联的清洁生产方案知识库，支持**增删改查**。
+
+### 3.2 页面设计与功能实现 (`scheme-library.vue`)
+采用成熟的 `CrudTable` + `CrudModal` 模式。
+
+- **`CrudTable` 配置**:
+  - **搜索栏 (`queryBar`)**: 提供“方案名称” (`n-input`) 和“关联指标” (`n-tree-select`) 作为搜索条件。
+  - **表格列**: 显示方案编号、名称、简介和关联的主要指标。
+- **`CrudModal` (方案表单)**:
+  - **方案名称**: `n-input`
+  - **方案简介/效益**: `n-input` (type="textarea")，可升级为富文本编辑器。
+  - **关联指标**: **核心组件**，使用 `n-tree-select`，`multiple` 和 `checkable` 属性开启多选。其 `:options` 动态绑定从 `pcbApi.getAuditStandards()` 获取的指标树数据。
+
+### 3.3 方案库数据示例
+以下为方案库中存储的几条示例数据，前端通过 `getSchemeList` 获取，或通过 `create/updateScheme` 提交。
+
+| id | name | description | economicBenefit | environmentalBenefit | indicatorIds |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 8 | 废水深度处理回用系统改造 | 更换超滤和反渗透膜组件，安装在线水质监测设备... | 每万平米节约新鲜水成本1.6万元... | 每万平米减少废水排放850吨... | `[15, 19, 30, 42, 59]` |
+| 3 | 镀铜生产线智能化改造 | 引进垂直连续电镀(VCP)设备替代传统龙门式镀铜线... | 每万平米节约原材料成本3.5万元... | 每万平米减少废水产生100吨... | `[1, 6, 7, 9, 20, 28, 30, 34, 38, 43]` |
+| 4 | 有机废气收集处理系统优化 | 优化废气集气罩设计并增设软帘，配置大功率防腐风机... | 每万平米节约活性炭使用成本0.3万元... | 有机废气收集效率提升至90%... | `[43, 59]` |
+
+### 3.4 API 交互
+- **加载方案列表**: `pcbApi.getSchemeList({ name: '关键词', indicatorId: '选中的指标ID' })`
+- **加载指标树 (用于表单)**: `pcbApi.getAuditStandards()`
+- **保存方案**: `pcbApi.createScheme({ name: '...', indicatorIds: ['19', '30'] })` 或 `pcbApi.updateScheme(id, { ... })`
+- **删除方案**: `pcbApi.deleteScheme(id)`
+
+---
+**总结**: 本指南详细规划了预审核、审核、方案库三大模块的前端实现细节，确保了功能与业务需求的深度契合，同时遵循了既定的技术规范，为下一步的编码工作提供了清晰的蓝图。

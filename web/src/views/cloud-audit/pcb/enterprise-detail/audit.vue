@@ -1,108 +1,53 @@
 <template>
-  <div class="audit-module">
-    <n-card title="PCB企业清洁生产审核">
-      <n-tabs type="line">
-        <n-tab-pane 
-          v-for="category in auditCategories"
-          :key="category.id"
-          :name="category.id"
-          :tab="category.name"
-        >
-          <n-data-table
-            :columns="getAuditColumns(category.id)"
-            :data="getAuditData(category.id)"
-            :row-key="row => row.id"
-            :pagination="false"
-          >
-            <template #action="{ row }">
-              <n-space>
-                <n-button 
-                  size="small" 
-                  type="primary"
-                  @click="handleShowSchemeModal(row)"
-                >
-                  查看方案
-                </n-button>
-                <n-button 
-                  size="small" 
-                  type="info"
-                  @click="editScheme(row)"
-                >
-                  编辑方案
-                </n-button>
-              </n-space>
-            </template>
-          </n-data-table>
-        </n-tab-pane>
-      </n-tabs>
-      
-      <div class="mt-4 text-center">
-        <n-button 
-          type="primary" 
-          size="large"
-          :disabled="!canGenerateReport"
-          @click="generateReport"
-        >
-          生成评估报告
-        </n-button>
-      </div>
-    </n-card>
-
-    <!-- 审核结果汇总 -->
-    <n-card title="审核结果汇总" class="mt-4">
-      <n-grid :cols="4" :x-gap="16">
-        <n-statistic label="总体评分" :value="auditResults.overall.totalScore" suffix="分" />
-        <n-statistic label="审核等级" :value="auditResults.overall.level" />
-        <n-statistic label="审核状态" :value="auditResults.overall.status" />
-        <n-statistic label="审核日期" :value="auditResults.overall.date" />
+  <div class="audit-page p-4">
+    <n-card title="审核结果总览" class="mb-4">
+      <!-- 汇总统计 -->
+      <n-grid :cols="4" :x-gap="16" class="mb-4">
+        <n-gi><n-statistic label="最终得分" :value="summary.totalScore.toFixed(2)" /></n-gi>
+        <n-gi><n-statistic label="综合等级">
+          <n-tag :type="getLevelTagType(summary.overallLevel)">{{ summary.overallLevel }}</n-tag>
+        </n-statistic></n-gi>
+        <n-gi><n-statistic label="待改进项数" :value="summary.improvementItems" /></n-gi>
+        <n-gi><n-statistic label="限定性指标" :value="summary.limitingIndicators" /></n-gi>
       </n-grid>
-      
-      <div class="mt-4">
-        <h4>分类评估结果</h4>
-        <n-grid :cols="3" :x-gap="16">
-          <n-card 
-            v-for="category in auditResults.categories"
-            :key="category.name"
-            class="category-card"
-          >
-            <div class="category-header">
-              <h5>{{ category.name }}</h5>
-              <n-tag :type="getCategoryType(category.score)">
-                {{ category.score }}分
-              </n-tag>
-            </div>
-            <div class="category-items">
-              <div 
-                v-for="item in category.items"
-                :key="item.name"
-                class="category-item"
-              >
-                <span class="item-name">{{ item.name }}</span>
-                <span class="item-score">{{ item.score }}分</span>
-              </div>
-            </div>
-          </n-card>
-        </n-grid>
+      <!-- 审核进度图表 -->
+      <div class="audit-chart">
+        <n-progress 
+          type="circle" 
+          :percentage="summary.totalScore" 
+          :color="getProgressColor(summary.totalScore)"
+          :stroke-width="8"
+        >
+          <span class="progress-text">{{ summary.totalScore.toFixed(1) }}分</span>
+        </n-progress>
+        <div class="chart-legend mt-4">
+          <n-space>
+            <n-tag type="success">I级 (≥90分)</n-tag>
+            <n-tag type="info">II级 (80-89分)</n-tag>
+            <n-tag type="warning">III级 (60-79分)</n-tag>
+            <n-tag type="error">不达标 (<60分)</n-tag>
+          </n-space>
+        </div>
       </div>
     </n-card>
 
-    <!-- 方案详情弹窗 -->
-    <CrudModal
-      v-model:visible="showSchemeModal"
-      title="方案详情"
-      :show-footer="false"
-    >
-      <div v-if="selectedScheme">
-        <h4>{{ selectedScheme.title }}</h4>
-        <p><strong>方案类型：</strong>{{ selectedScheme.type }}</p>
-        <p><strong>方案描述：</strong>{{ selectedScheme.description }}</p>
-        <p><strong>实施方案：</strong></p>
-        <pre class="scheme-content">{{ selectedScheme.implementation }}</pre>
-        <p><strong>预期效果：</strong>{{ selectedScheme.expectedEffect }}</p>
-        <p><strong>投资估算：</strong>{{ selectedScheme.investment }}万元</p>
-        <p><strong>投资回收期：</strong>{{ selectedScheme.paybackPeriod }}年</p>
-      </div>
-    </CrudModal>
+    <!-- 详细审核表 -->
+    <n-data-table
+      :columns="columns"
+      :data="auditTreeData"
+      :row-key="row => row.id"
+      default-expand-all
+      :pagination="false"
+    />
+    
+    <!-- 推荐方案弹窗 -->
+    <n-modal v-model:show="showSchemeModal">
+      <n-card style="width: 600px" title="推荐改进方案">
+        <div v-for="scheme in currentSchemes" :key="scheme.id" class="mb-2">
+          <strong>{{ scheme.name }}:</strong> {{ scheme.description }}
+        </div>
+      </n-card>
+    </n-modal>
 
     <!-- 模块导航按钮 -->
     <div class="module-navigation mt-4">
@@ -125,19 +70,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { 
   NCard, 
-  NTabs, 
-  NTabPane,
   NDataTable,
   NButton,
   NSpace,
   NGrid,
+  NGi,
   NStatistic,
-  NTag
+  NTag,
+  NModal,
+  NSelect,
+  NProgress
 } from 'naive-ui'
-import CrudModal from '@/components/table/CrudModal.vue'
+import TheIcon from '@/components/icon/TheIcon.vue'
 import { mockDetailApi } from '@/mock/pcb-detail'
 
 defineOptions({ name: 'PCB审核' })
@@ -152,131 +99,263 @@ const props = defineProps({
 const emit = defineEmits(['update', 'navigate'])
 
 // 数据状态
-const auditResults = ref({
-  overall: {
-    totalScore: 0,
-    level: '',
-    status: '',
-    date: ''
-  },
-  categories: []
+const loading = ref(false)
+const showSchemeModal = ref(false)
+const currentSchemes = ref([])
+
+// 审核汇总数据
+const summary = ref({
+  totalScore: 0,
+  overallLevel: '未评估',
+  improvementItems: 0,
+  limitingIndicators: 0
 })
 
-const auditCategories = ref([
-  { id: 'production', name: '生产工艺' },
-  { id: 'resource', name: '资源消耗' },
-  { id: 'environment', name: '环境保护' }
-])
+// 审核树数据
+const auditTreeData = ref([])
 
-const showSchemeModal = ref(false)
-const selectedScheme = ref(null)
+// 64项指标的具体定义
+const indicators = [
+  // 生产工艺与装备要求 (1-6)
+  {
+    id: 1,
+    name: '刚性单面板生产工艺',
+    category: '生产工艺与装备要求',
+    type: 'qualitative',
+    level: null,
+    score: 0
+  },
+  {
+    id: 2,
+    name: '刚性双面板生产工艺',
+    category: '生产工艺与装备要求',
+    type: 'qualitative',
+    level: null,
+    score: 0
+  },
+  // ... 其他62项指标
+]
+
+// 表格列定义
+const columns = [
+  {
+    title: '序号',
+    key: 'id',
+    width: 80
+  },
+  {
+    title: '指标名称',
+    key: 'name',
+    width: 250
+  },
+  {
+    title: '类别',
+    key: 'category',
+    width: 150
+  },
+  {
+    title: '现状值',
+    key: 'currentValue',
+    width: 120,
+    render: (row) => {
+      if (row.type === 'quantitative') {
+        return row.currentValue ? `${row.currentValue} ${row.unit || ''}` : '-'
+      }
+      return '-'
+    }
+  },
+  {
+    title: '等级',
+    key: 'level',
+    width: 120,
+    render: (row) => {
+      if (row.type === 'qualitative' || row.type === 'limiting') {
+        return h(NSelect, {
+          value: row.level,
+          options: getLevelOptions(row.type),
+          placeholder: '请选择等级',
+          onUpdateValue: (value) => updateIndicatorLevel(row.id, value)
+        })
+      } else if (row.type === 'quantitative') {
+        const levelType = getLevelType(row.level)
+        return h(NTag, { type: levelType }, row.level || '未评估')
+      }
+      return '-'
+    }
+  },
+  {
+    title: '得分',
+    key: 'score',
+    width: 100,
+    render: (row) => {
+      return h('span', { class: 'score-text' }, `${row.score || 0}分`)
+    }
+  },
+  {
+    title: '改进措施',
+    key: 'schemes',
+    width: 120,
+    render: (row) => {
+      if (row.level !== 'I级' && row.recommendedSchemes?.length > 0) {
+        return h(NButton, {
+          size: 'small',
+          type: 'primary',
+          onClick: () => showRecommendedSchemes(row.recommendedSchemes)
+        }, '查看方案')
+      }
+      return '-'
+    }
+  }
+]
+
+// 获取等级选项
+const getLevelOptions = (type) => {
+  if (type === 'limiting') {
+    return [
+      { label: '符合', value: 'I级' },
+      { label: '不符合', value: '不达标' }
+    ]
+  }
+  return [
+    { label: 'I级', value: 'I级' },
+    { label: 'II级', value: 'II级' },
+    { label: 'III级', value: 'III级' },
+    { label: '不达标', value: '不达标' }
+  ]
+}
+
+// 获取等级类型
+const getLevelType = (level) => {
+  const types = {
+    'I级': 'success',
+    'II级': 'info', 
+    'III级': 'warning',
+    '不达标': 'error'
+  }
+  return types[level] || 'default'
+}
+
+// 获取汇总等级标签类型
+const getLevelTagType = (level) => {
+  return getLevelType(level)
+}
+
+// 更新指标等级
+const updateIndicatorLevel = async (indicatorId, level) => {
+  try {
+    const indicator = auditTreeData.value.find(item => item.id === indicatorId)
+    if (indicator) {
+      indicator.level = level
+      indicator.score = calculateScore(level)
+      
+      // 如果是限定性指标不达标，显示警告
+      if (indicator.type === 'limiting' && level === '不达标') {
+        window.$dialog.warning({
+          title: '限定性指标警告',
+          content: '存在限定性指标不达标，总评级不得高于III级',
+          positiveText: '确认'
+        })
+      }
+      
+      // 更新改进措施
+      if (level !== 'I级') {
+        indicator.recommendedSchemes = await getRecommendedSchemes(indicatorId)
+      } else {
+        indicator.recommendedSchemes = []
+      }
+      
+      // 重新计算汇总数据
+      calculateSummary()
+    }
+  } catch (error) {
+    console.error('更新指标等级失败:', error)
+    window.$message.error('更新指标等级失败')
+  }
+}
+
+// 计算分数
+const calculateScore = (level) => {
+  const scores = {
+    'I级': 100,
+    'II级': 80,
+    'III级': 60,
+    '不达标': 0
+  }
+  return scores[level] || 0
+}
+
+// 获取推荐方案
+const getRecommendedSchemes = async (indicatorId) => {
+  try {
+    const response = await mockDetailApi.getRecommendedSchemes(props.enterpriseId, indicatorId)
+    return response.data
+  } catch (error) {
+    console.error('获取推荐方案失败:', error)
+    return []
+  }
+}
+
+// 显示推荐方案
+const showRecommendedSchemes = (schemes) => {
+  currentSchemes.value = schemes
+  showSchemeModal.value = true
+}
+
+// 计算汇总数据
+const calculateSummary = () => {
+  const totalScore = auditTreeData.value.reduce((sum, item) => sum + (item.score || 0), 0)
+  const avgScore = auditTreeData.value.length > 0 ? totalScore / auditTreeData.value.length : 0
+  
+  let overallLevel = '未评估'
+  if (avgScore >= 90) overallLevel = 'I级'
+  else if (avgScore >= 80) overallLevel = 'II级' 
+  else if (avgScore >= 60) overallLevel = 'III级'
+  else overallLevel = '不达标'
+  
+  // 检查限定性指标
+  const limitingIndicators = auditTreeData.value.filter(item => 
+    item.type === 'limiting' && item.level === '不达标'
+  ).length
+  
+  if (limitingIndicators > 0 && overallLevel !== '不达标') {
+    overallLevel = 'III级'
+  }
+  
+  const improvementItems = auditTreeData.value.filter(item => 
+    item.level && item.level !== 'I级'
+  ).length
+  
+  summary.value = {
+    totalScore: avgScore,
+    overallLevel,
+    improvementItems,
+    limitingIndicators
+  }
+}
+
+// 获取进度条颜色
+const getProgressColor = (score) => {
+  if (score >= 90) return '#18a058'
+  if (score >= 80) return '#2080f0'  
+  if (score >= 60) return '#f0a020'
+  return '#d03050'
+}
 
 // 获取审核数据
 const fetchAuditData = async () => {
   try {
+    loading.value = true
     const response = await mockDetailApi.getAuditResults(props.enterpriseId)
-    auditResults.value = response.data
+    auditTreeData.value = response.data || indicators
+    calculateSummary()
   } catch (error) {
     console.error('获取审核数据失败:', error)
     window.$message.error('获取审核数据失败')
+    auditTreeData.value = indicators
+  } finally {
+    loading.value = false
   }
 }
-
-// 获取审核列配置
-const getAuditColumns = (categoryId) => {
-  const baseColumns = [
-    {
-      title: '指标名称',
-      key: 'name',
-      width: 200
-    },
-    {
-      title: '评分',
-      key: 'score',
-      width: 100,
-      render: (row) => {
-        return h('span', { class: 'score-text' }, `${row.score}分`)
-      }
-    },
-    {
-      title: '评价',
-      key: 'comment',
-      ellipsis: { tooltip: true }
-    }
-  ]
-  
-  if (categoryId === 'production') {
-    baseColumns.splice(1, 0, {
-      title: '工艺先进性',
-      key: 'advanced',
-      width: 120,
-      render: (row) => {
-        return h('n-tag', { type: row.advanced ? 'success' : 'warning' }, 
-          row.advanced ? '先进' : '一般')
-      }
-    })
-  }
-  
-  baseColumns.push({
-    title: '操作',
-    key: 'action',
-    width: 150,
-    render: (row) => h('template', { slot: 'action' }, { row })
-  })
-  
-  return baseColumns
-}
-
-// 获取审核数据
-const getAuditData = (categoryId) => {
-  const category = auditResults.value.categories.find(c => c.id === categoryId)
-  return category ? category.items : []
-}
-
-// 获取分类类型
-const getCategoryType = (score) => {
-  if (score >= 90) return 'success'
-  if (score >= 80) return 'info'
-  if (score >= 70) return 'warning'
-  return 'error'
-}
-
-// 显示方案详情
-const handleShowSchemeModal = (row) => {
-  selectedScheme.value = {
-    title: '电镀生产线节能改造',
-    type: '节能降耗',
-    description: '通过更换高效整流器、优化电镀参数等措施降低能耗',
-    implementation: '1. 更换高效整流器\n2. 优化电镀工艺参数\n3. 安装能耗监测系统',
-    expectedEffect: '预计可降低电耗15%，年节约成本50万元',
-    investment: 200,
-    paybackPeriod: 4
-  }
-  showSchemeModal.value = true
-}
-
-// 编辑方案
-const editScheme = (row) => {
-  window.$message.info('编辑方案功能待开发')
-}
-
-// 生成报告
-const generateReport = async () => {
-  try {
-    await mockDetailApi.generateReport(props.enterpriseId, auditResults.value)
-    window.$message.success('评估报告生成成功')
-    emit('update', auditResults.value)
-  } catch (error) {
-    console.error('生成报告失败:', error)
-    window.$message.error('生成报告失败')
-  }
-}
-
-// 是否可以生成报告
-const canGenerateReport = computed(() => {
-  return auditResults.value.categories.length > 0 && 
-         auditResults.value.overall.totalScore > 0
-})
 
 // 导航方法
 const goToPrevious = () => {
@@ -293,8 +372,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.audit-module {
-  padding: 16px;
+.audit-page {
+  background: #f8f9fa;
+}
+
+.audit-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.progress-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
 }
 
 .category-card {
