@@ -245,3 +245,9 @@ const removeHazardousRow = (index) => {
 }
 </style>
 
+
+
+
+
+
+

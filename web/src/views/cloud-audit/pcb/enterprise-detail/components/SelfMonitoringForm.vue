@@ -2,7 +2,7 @@
   <div class="self-monitoring-form">
     <n-space vertical :size="16">
       <!-- 有组织废气监测 -->
-      <n-card title="有组织废气监测" size="small">
+      <n-card title="有组织废气监测" size="small" class="sub-module">
         <n-form :model="formData.organizedGas">
           <n-grid :cols="2" :x-gap="16" :y-gap="12">
             <n-form-item-gi label="监测项目">
@@ -48,8 +48,55 @@
         </n-form>
       </n-card>
 
+      <!-- 无组织有机废气监测 -->
+      <n-card title="无组织有机废气监测" size="small" class="sub-module">
+        <n-form :model="formData.unorganizedGas">
+          <n-grid :cols="2" :x-gap="16" :y-gap="12">
+            <n-form-item-gi label="检测项目">
+              <n-input
+                v-model:value="formData.unorganizedGas.item"
+                placeholder="如：VOCs"
+              />
+            </n-form-item-gi>
+            <n-form-item-gi label="浓度/速率">
+              <n-input-number
+                v-model:value="formData.unorganizedGas.concentration"
+                :min="0"
+                :precision="2"
+              />
+            </n-form-item-gi>
+            <n-form-item-gi label="监测点位">
+              <n-input
+                v-model:value="formData.unorganizedGas.point"
+                placeholder="如：厂界"
+              />
+            </n-form-item-gi>
+            <n-form-item-gi label="污染物排放标准">
+              <n-input
+                v-model:value="formData.unorganizedGas.standard"
+                placeholder="如：DB32/4041-2021"
+              />
+            </n-form-item-gi>
+            <n-form-item-gi label="监测报告" :span="2">
+              <n-upload
+                :file-list="unorganizedGasFiles"
+                @update:file-list="handleUnorganizedGasUpload"
+                @before-upload="beforeUpload"
+              >
+                <n-button>
+                  <template #icon>
+                    <TheIcon icon="carbon:document-add" />
+                  </template>
+                  上传监测报告
+                </n-button>
+              </n-upload>
+            </n-form-item-gi>
+          </n-grid>
+        </n-form>
+      </n-card>
+
       <!-- 废水监测 -->
-      <n-card title="废水监测" size="small">
+      <n-card title="废水监测" size="small" class="sub-module">
         <n-form :model="formData.wastewater">
           <n-grid :cols="2" :x-gap="16" :y-gap="12">
             <n-form-item-gi label="监测项目">
@@ -96,7 +143,7 @@
       </n-card>
 
       <!-- 噪声监测 -->
-      <n-card title="噪声监测" size="small">
+      <n-card title="噪声监测" size="small" class="sub-module">
         <n-form :model="formData.noise">
           <n-grid :cols="2" :x-gap="16" :y-gap="12">
             <n-form-item-gi label="监测项目">
@@ -171,6 +218,13 @@ const props = defineProps({
         standard: '', 
         reportFileId: '' 
       },
+      unorganizedGas: {
+        item: '',
+        concentration: null,
+        point: '',
+        standard: '',
+        reportFileId: ''
+      },
       wastewater: { 
         item: '', 
         concentration: null, 
@@ -198,6 +252,7 @@ const formData = computed({
 
 // 文件列表
 const organizedGasFiles = ref([])
+const unorganizedGasFiles = ref([])
 const wastewaterFiles = ref([])
 const noiseFiles = ref([])
 
@@ -237,6 +292,15 @@ const handleWastewaterUpload = (fileList) => {
   }
 }
 
+const handleUnorganizedGasUpload = (fileList) => {
+  unorganizedGasFiles.value = fileList
+  if (fileList.length > 0) {
+    formData.value.unorganizedGas.reportFileId = fileList[fileList.length - 1].id || 'temp-' + Date.now()
+  } else {
+    formData.value.unorganizedGas.reportFileId = ''
+  }
+}
+
 const handleNoiseUpload = (fileList) => {
   noiseFiles.value = fileList
   if (fileList.length > 0) {
@@ -251,5 +315,22 @@ const handleNoiseUpload = (fileList) => {
 .self-monitoring-form {
   padding: 16px 0;
 }
+
+.sub-module {
+  border: 1px solid #e0e0e6;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sub-module:hover {
+  border-color: #18a058;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.15);
+}
 </style>
+
+
+
+
+
 

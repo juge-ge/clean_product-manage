@@ -30,9 +30,9 @@
           @edit="handleEdit"
           @delete="handleDelete"
         />
+        </div>
       </div>
-    </div>
-
+      
     <!-- 企业详情视图 -->
     <div v-else class="enterprise-detail">
       <!-- 顶部导航栏 -->
@@ -68,14 +68,18 @@
       
       <!-- 模块内容区域 -->
       <div class="content-area">
-        <keep-alive v-if="currentEnterprise">
-          <component 
-            :is="getCurrentComponent()"
-            :enterprise-id="currentEnterprise?.id"
-            @update="handleModuleUpdate"
-            @navigate="handleModuleNavigate"
-          />
-        </keep-alive>
+        <n-spin :show="loading">
+          <keep-alive>
+            <component 
+              v-if="currentEnterprise && getCurrentComponent()"
+              :is="getCurrentComponent()"
+              :enterprise-id="currentEnterprise.id"
+              :key="activeTab"
+              @update="handleModuleUpdate"
+              @navigate="handleModuleNavigate"
+            />
+          </keep-alive>
+        </n-spin>
       </div>
     </div>
 
@@ -93,7 +97,7 @@
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NInput, NSpace, NDivider } from 'naive-ui'
+import { NButton, NInput, NSpace, NDivider, NSpin } from 'naive-ui'
 import CommonPage from '@/components/page/CommonPage.vue'
 import CrudModal from '@/components/table/CrudModal.vue'
 import TheIcon from '@/components/icon/TheIcon.vue'
@@ -119,6 +123,7 @@ const currentEnterprise = ref(null)
 const enterprises = ref([])
 const activeTab = ref('basic-info')
 const currentStep = ref(0)
+const loading = ref(false)
 
 const auditSteps = [
   { title: '企业信息', description: '基本信息录入', key: 'basic-info' },
@@ -143,22 +148,44 @@ const fetchEnterprises = async () => {
 }
 
 // 查看企业详情
-const handleView = (enterprise) => {
-  currentEnterprise.value = enterprise
-  activeTab.value = 'basic-info'
-  currentStep.value = 0
-  cacheCurrentState()
+const handleView = async (id) => {
+  try {
+    loading.value = true
+    const response = await mockApi.getEnterpriseDetail(id)
+    // 等待DOM更新完成
+    await nextTick()
+    // 设置企业信息
+    currentEnterprise.value = response.data
+    activeTab.value = 'basic-info'
+    currentStep.value = 0
+    // 缓存状态
+    cacheCurrentState()
+  } catch (error) {
+    console.error('获取企业详情失败:', error)
+    window.$message.error('获取企业详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 返回列表
 const handleBack = async () => {
-  // 重置到企业信息模块
-  activeTab.value = 'basic-info'
-  currentStep.value = 0
-  // 等待DOM更新完成
-  await nextTick()
-  // 缓存当前状态
-  cacheCurrentState()
+  try {
+    // 先清除缓存
+    clearCache()
+    // 重置状态
+    activeTab.value = 'basic-info'
+    currentStep.value = 0
+    // 等待DOM更新完成
+    await nextTick()
+    // 重置企业信息
+    currentEnterprise.value = null
+    // 重新获取企业列表
+    await fetchEnterprises()
+  } catch (error) {
+    console.error('返回列表失败:', error)
+    window.$message.error('返回列表失败')
+  }
 }
 
 // 处理步骤点击

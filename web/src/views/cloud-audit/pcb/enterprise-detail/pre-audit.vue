@@ -134,6 +134,7 @@ const formData = ref({
   // 自行监测情况
   selfMonitoring: {
     organizedGas: { item: '', concentration: null, point: '', standard: '', reportFileId: '' },
+    unorganizedGas: { item: '', concentration: null, point: '', standard: '', reportFileId: '' },
     wastewater: { item: '', concentration: null, point: '', standard: '', reportFileId: '' },
     noise: { item: '', level: null, point: '', standard: '', reportFileId: '' }
   }

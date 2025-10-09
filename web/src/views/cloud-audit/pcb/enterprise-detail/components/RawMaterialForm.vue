@@ -56,9 +56,10 @@ const columns = [
     key: 'name', 
     width: 150,
     render: (row, index) => {
-      return h(NInput, {
+      return h(NSelect, {
         value: row.name,
-        placeholder: "请输入材料名称",
+        options: materialOptions,
+        placeholder: "请选择材料名称",
         onUpdateValue: (value) => {
           row.name = value
         }
@@ -162,6 +163,17 @@ const yearOptions = [
   { label: '2024', value: 2024 }
 ]
 
+const materialOptions = [
+  { label: '覆铜板', value: '覆铜板' },
+  { label: '铜箔', value: '铜箔' },
+  { label: '底片', value: '底片' },
+  { label: '硫酸铜', value: '硫酸铜' },
+  { label: '蚀刻液', value: '蚀刻液' },
+  { label: '抗蚀剂', value: '抗蚀剂' },
+  { label: '油墨', value: '油墨' },
+  { label: '盐酸', value: '盐酸' }
+]
+
 const unitOptions = [
   { label: 'm²', value: 'm²' },
   { label: 'kg', value: 'kg' },
@@ -207,4 +219,8 @@ const removeRow = (index) => {
   padding: 16px 0;
 }
 </style>
+
+
+
+
 

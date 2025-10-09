@@ -2,7 +2,7 @@
   <div class="pollution-control-form">
     <n-space vertical :size="16">
       <!-- 金属铜回收量 -->
-      <n-card title="金属铜回收量" size="small">
+      <n-card title="金属铜回收量" size="small" class="sub-module">
         <n-data-table
           :columns="recoveryColumns"
           :data="formData.copperRecovery"
@@ -14,7 +14,7 @@
       </n-card>
 
       <!-- 工业用水重复利用率 -->
-      <n-card title="工业用水重复利用率" size="small">
+      <n-card title="工业用水重复利用率" size="small" class="sub-module">
         <n-data-table
           :columns="reuseRateColumns"
           :data="formData.waterReuseRate"
@@ -26,7 +26,7 @@
       </n-card>
 
       <!-- 废气排放 -->
-      <n-card title="废气排放处理" size="small">
+      <n-card title="废气排放处理" size="small" class="sub-module">
         <n-data-table
           :columns="gasEmissionColumns"
           :data="formData.gasEmission"
@@ -38,7 +38,7 @@
       </n-card>
 
       <!-- 废水排放 -->
-      <n-card title="废水排放处理" size="small">
+      <n-card title="废水排放处理" size="small" class="sub-module">
         <n-data-table
           :columns="waterEmissionColumns"
           :data="formData.waterEmission"
@@ -305,5 +305,22 @@ const removeWaterEmissionRow = (index) => {
 .pollution-control-form {
   padding: 16px 0;
 }
+
+.sub-module {
+  border: 1px solid #e0e0e6;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sub-module:hover {
+  border-color: #18a058;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.15);
+}
 </style>
+
+
+
+
+
 
