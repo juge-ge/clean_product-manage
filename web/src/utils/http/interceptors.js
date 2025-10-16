@@ -15,6 +15,13 @@ export function reqResolve(config) {
     // 同时设置Authorization头以兼容
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // 兜底：JSON写请求若未显式设置Content-Type，自动补全
+  const method = (config.method || 'get').toLowerCase()
+  const isWrite = method === 'post' || method === 'put' || method === 'patch'
+  if (isWrite && !config.headers['Content-Type'] && !config.headers['content-type']) {
+    config.headers['Content-Type'] = 'application/json'
+  }
   
   console.log('🔑 请求头设置:', {
     url: config.url,

@@ -1,4 +1,7 @@
 import { request } from '@/utils'
+import steelApi from './steel'
+import { policyApi } from './policy'
+import { pcbApi } from './pcb'
 
 export default {
   login: (data) => request.post('/base/access_token', data, { noNeedToken: true }),
@@ -39,4 +42,10 @@ export default {
   deleteDept: (params = {}) => request.delete('/dept/delete', { params }),
   // auditlog
   getAuditLogList: (params = {}) => request.get('/auditlog/list', { params }),
+  // steel
+  steel: steelApi,
+  // policy
+  policy: policyApi,
+  // pcb
+  pcb: pcbApi,
 }

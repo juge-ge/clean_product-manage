@@ -70,7 +70,8 @@ import ResourceConsumptionForm from './components/ResourceConsumptionForm.vue'
 import PollutionControlForm from './components/PollutionControlForm.vue'
 import SolidWasteForm from './components/SolidWasteForm.vue'
 import SelfMonitoringForm from './components/SelfMonitoringForm.vue'
-import { mockDetailApi } from '@/mock/pcb-detail'
+// import { mockDetailApi } from '@/mock/pcb-detail'
+import api from '@/api'
 
 defineOptions({ name: 'PCB预审核' })
 
@@ -144,7 +145,7 @@ const formData = ref({
 const fetchPreAuditData = async () => {
   try {
     loading.value = true
-    const response = await mockDetailApi.getPreAuditData(props.enterpriseId)
+    const response = await api.pcb.preAudit.getData(props.enterpriseId)
     const data = response.data
     
     if (data) {
@@ -165,7 +166,7 @@ const fetchPreAuditData = async () => {
 const handleSaveDraft = async () => {
   try {
     loading.value = true
-    await mockDetailApi.savePreAuditData(props.enterpriseId, formData.value)
+    await api.pcb.preAudit.saveData(props.enterpriseId, formData.value)
     window.$message.success('草稿保存成功')
   } catch (error) {
     console.error('保存草稿失败:', error)
@@ -179,7 +180,7 @@ const handleSaveDraft = async () => {
 const handleSubmit = async () => {
   try {
     loading.value = true
-    await mockDetailApi.submitPreAuditData(props.enterpriseId, formData.value)
+    await api.pcb.preAudit.submitData(props.enterpriseId)
     window.$message.success('预审核数据提交成功')
     emit('update', formData.value)
   } catch (error) {

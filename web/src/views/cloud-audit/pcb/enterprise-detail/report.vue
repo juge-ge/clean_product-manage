@@ -42,7 +42,8 @@
 import { ref, onMounted } from 'vue'
 import { NCard, NButton, NSpace } from 'naive-ui'
 import ReportEditor from '../components/ReportEditor.vue'
-import { mockDetailApi } from '@/mock/pcb-detail'
+// import { mockDetailApi } from '@/mock/pcb-detail'
+import api from '@/api'
 
 defineOptions({ name: '审核报告' })
 
@@ -65,13 +66,13 @@ const schemeData = ref([])
 // 获取报告数据
 const fetchReportData = async () => {
   try {
-    const response = await mockDetailApi.getReportTemplate(props.enterpriseId)
+    const response = await api.pcb.report.getReport(props.enterpriseId)
     reportContent.value = response.data.content || generateDefaultReport()
     
     // 获取相关数据
     const [auditResponse, schemeResponse] = await Promise.all([
-      mockDetailApi.getAuditResults(props.enterpriseId),
-      mockDetailApi.getSchemes(props.enterpriseId)
+      api.pcb.audit.getResults(props.enterpriseId),
+      api.pcb.enterpriseScheme.getList(props.enterpriseId)
     ])
     
     auditData.value = auditResponse.data

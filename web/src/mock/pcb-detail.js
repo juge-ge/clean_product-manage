@@ -2388,7 +2388,7 @@ export const mockDetailApi = {
   
   // 方案库相关
   getSchemes: (enterpriseId, params = {}) => {
-    const { page = 1, pageSize = 10, name = '', indicatorIds = [] } = params
+    const { page = 1, page_size = 10, name = '', indicatorIds = [] } = params
     let filteredSchemes = mockSchemeLibrary
 
     // 如果指定了指标ID，使用映射表获取相关方案
@@ -2433,8 +2433,8 @@ export const mockDetailApi = {
     
     // 计算分页
     const total = filteredSchemes.length
-    const start = (page - 1) * pageSize
-    const end = start + pageSize
+    const start = (page - 1) * page_size
+    const end = start + page_size
     const list = filteredSchemes.slice(start, end)
     
     return Promise.resolve({
@@ -2442,7 +2442,7 @@ export const mockDetailApi = {
         list,
         total,
         page,
-        pageSize
+        page_size
       }
     })
   },

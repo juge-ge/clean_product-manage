@@ -112,17 +112,98 @@ function handleMenuSelect(key, item) {
 .side-menu {
   margin-top: 8px;
   
+  // 智能现代字体样式
+  .n-menu-item-content {
+    font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+    
+    // 菜单项文字样式
+    .n-menu-item-content__text {
+      font-weight: 500;
+      font-size: 14px;
+      color: #374151;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    // 图标样式
+    .n-menu-item-content__icon {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    // 悬停效果
+    &:hover {
+      .n-menu-item-content__text {
+        color: #1f2937;
+        font-weight: 600;
+      }
+      
+      .n-menu-item-content__icon {
+        transform: scale(1.05);
+      }
+    }
+    
+    // 选中状态
+    &.n-menu-item-content--selected {
+      .n-menu-item-content__text {
+        color: #1f2937;
+        font-weight: 600;
+      }
+      
+      .n-menu-item-content__icon {
+        transform: scale(1.05);
+      }
+    }
+  }
+  
+  // 子菜单样式
+  .n-menu-item-content--child {
+    .n-menu-item-content__text {
+      font-size: 13px;
+      font-weight: 400;
+      color: #6b7280;
+    }
+    
+    &:hover .n-menu-item-content__text {
+      color: #374151;
+      font-weight: 500;
+    }
+    
+    &.n-menu-item-content--selected .n-menu-item-content__text {
+      color: #1f2937;
+      font-weight: 500;
+    }
+  }
+  
   &:not(.n-menu--collapsed) {
     .n-menu-item-content {
       &::before {
         left: 5px;
         right: 5px;
+        border-radius: 0 6px 6px 0;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
       &.n-menu-item-content--selected,
       &:hover {
         &::before {
-          border-left: 4px solid var(--primary-color);
+          border-left: 3px solid var(--primary-color);
+          background: rgba(59, 130, 246, 0.05);
         }
+      }
+    }
+  }
+  
+  // 折叠状态下的样式
+  &.n-menu--collapsed {
+    .n-menu-item-content {
+      .n-menu-item-content__icon {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      &:hover .n-menu-item-content__icon {
+        transform: scale(1.1);
       }
     }
   }

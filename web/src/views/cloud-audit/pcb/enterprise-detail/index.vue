@@ -80,8 +80,9 @@ import PreAudit from './pre-audit.vue'
 import Audit from './audit.vue'
 import SchemeLibrary from './scheme-library.vue'
 import Report from './report.vue'
-import { mockApi } from '@/mock/pcb'
-import { mockDetailApi } from '@/mock/pcb-detail'
+// import { mockApi } from '@/mock/pcb'
+// import { mockDetailApi } from '@/mock/pcb-detail'
+import api from '@/api'
 
 defineOptions({ name: 'PCB企业详情' })
 
@@ -104,7 +105,7 @@ const auditSteps = [
 // 获取企业信息
 const fetchEnterprise = async () => {
   try {
-    const response = await mockApi.getEnterpriseDetail(enterpriseId.value)
+    const response = await api.pcb.enterprise.getDetail(enterpriseId.value)
     enterprise.value = response.data
     updateCurrentStep()
   } catch (error) {

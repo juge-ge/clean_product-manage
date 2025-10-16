@@ -12,20 +12,16 @@
         <n-input v-model:value="formData.name" placeholder="请输入企业名称" />
       </n-form-item-gi>
       
-      <n-form-item-gi label="所属地市" path="city">
-        <n-input v-model:value="formData.city" placeholder="请输入所属地市" />
+      <n-form-item-gi label="统一社会信用代码" path="unifiedSocialCreditCode">
+        <n-input v-model:value="formData.unifiedSocialCreditCode" placeholder="请输入统一社会信用代码" />
       </n-form-item-gi>
       
-      <n-form-item-gi label="所属县" path="county">
-        <n-input v-model:value="formData.county" placeholder="请输入所属县" />
+      <n-form-item-gi label="所属地市" path="region">
+        <n-input v-model:value="formData.region" placeholder="请输入所属地市" />
       </n-form-item-gi>
       
-      <n-form-item-gi label="企业规模" path="scale">
-        <n-select
-          v-model:value="formData.scale"
-          :options="scaleOptions"
-          placeholder="请选择企业规模"
-        />
+      <n-form-item-gi label="所属县" path="district">
+        <n-input v-model:value="formData.district" placeholder="请输入所属县" />
       </n-form-item-gi>
       
       <n-form-item-gi label="注册资本" path="capital">
@@ -39,14 +35,14 @@
         </n-input-number>
       </n-form-item-gi>
       
-      <n-form-item-gi label="年产值" path="annualOutput">
+      <n-form-item-gi label="年产能" path="capacity">
         <n-input-number
-          v-model:value="formData.annualOutput"
-          placeholder="请输入年产值"
+          v-model:value="formData.capacity"
+          placeholder="请输入年产能"
           :min="0"
           :precision="2"
         >
-          <template #suffix>万元</template>
+          <template #suffix>万m²</template>
         </n-input-number>
       </n-form-item-gi>
       
@@ -54,30 +50,25 @@
         <n-input v-model:value="formData.legalRepresentative" placeholder="请输入法人代表" />
       </n-form-item-gi>
       
-      <n-form-item-gi label="联系人" path="contact">
-        <n-input v-model:value="formData.contact" placeholder="请输入联系人" />
+      <n-form-item-gi label="联系人" path="contactPerson">
+        <n-input v-model:value="formData.contactPerson" placeholder="请输入联系人" />
       </n-form-item-gi>
       
-      <n-form-item-gi label="联系电话" path="phone">
-        <n-input v-model:value="formData.phone" placeholder="请输入联系电话" />
+      <n-form-item-gi label="联系电话" path="contactPhone">
+        <n-input v-model:value="formData.contactPhone" placeholder="请输入联系电话" />
       </n-form-item-gi>
       
-      <n-form-item-gi label="成立日期" path="establishmentDate">
-        <n-date-picker
-          v-model:value="formData.establishmentDate"
-          type="date"
-          placeholder="请选择成立日期"
-          style="width: 100%"
-        />
+      <n-form-item-gi label="联系邮箱" path="contactEmail">
+        <n-input v-model:value="formData.contactEmail" placeholder="请输入联系邮箱" />
+      </n-form-item-gi>
+      
+      <n-form-item-gi label="行业类型" path="industryType">
+        <n-input v-model:value="formData.industryType" placeholder="请输入行业类型" />
       </n-form-item-gi>
     </n-grid>
 
     <n-form-item label="注册地址" path="address">
       <n-input v-model:value="formData.address" placeholder="请输入注册地址" />
-    </n-form-item>
-    
-    <n-form-item label="生产地址" path="productionAddress">
-      <n-input v-model:value="formData.productionAddress" placeholder="请输入生产地址" />
     </n-form-item>
   </n-form>
 </template>
@@ -96,24 +87,18 @@ const props = defineProps({
 const formRef = ref(null)
 const formData = ref({
   name: '',
-  city: '',
-  county: '',
-  scale: null,
+  unifiedSocialCreditCode: '',
+  region: '',
+  district: '',
   capital: null,
-  annualOutput: null,
+  capacity: null,
   legalRepresentative: '',
-  address: '',
-  productionAddress: '',
-  contact: '',
-  phone: '',
-  establishmentDate: null
+  contactPerson: '',
+  contactPhone: '',
+  contactEmail: '',
+  industryType: '',
+  address: ''
 })
-
-const scaleOptions = [
-  { label: '大型', value: '大型' },
-  { label: '中型', value: '中型' },
-  { label: '小型', value: '小型' }
-]
 
 const rules = {
   name: {
@@ -121,61 +106,36 @@ const rules = {
     message: '请输入企业名称',
     trigger: 'blur'
   },
-  city: {
+  region: {
     required: true,
     message: '请输入所属地市',
     trigger: 'blur'
   },
-  county: {
+  district: {
     required: true,
     message: '请输入所属县',
     trigger: 'blur'
-  },
-  scale: {
-    required: true,
-    message: '请选择企业规模',
-    trigger: 'change'
-  },
-  capital: {
-    required: true,
-    message: '请输入注册资本',
-    trigger: 'change'
-  },
-  annualOutput: {
-    required: true,
-    message: '请输入年产值',
-    trigger: 'change'
   },
   legalRepresentative: {
     required: true,
     message: '请输入法人代表',
     trigger: 'blur'
   },
-  contact: {
+  contactPerson: {
     required: true,
     message: '请输入联系人',
     trigger: 'blur'
   },
-  phone: {
+  contactPhone: {
     required: true,
     message: '请输入联系电话',
     trigger: 'blur'
-  },
-  establishmentDate: {
-    required: true,
-    message: '请选择成立日期',
-    trigger: 'change'
   },
   address: {
     required: true,
     message: '请输入注册地址',
     trigger: 'blur'
   },
-  productionAddress: {
-    required: true,
-    message: '请输入生产地址',
-    trigger: 'blur'
-  }
 }
 
 // 监听props.data变化，更新表单数据

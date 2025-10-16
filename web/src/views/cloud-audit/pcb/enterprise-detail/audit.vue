@@ -124,12 +124,14 @@
           <template #schemes="{ row }">
             <n-select
               v-if="!row.isCategory"
-              v-model:value="row.selectedScheme"
+              v-model:value="row.selectedSchemes"
               :options="row.recommendedSchemes"
               placeholder="选择方案"
               size="small"
-              style="width: 150px"
+              style="width: 250px"
               clearable
+              multiple
+              max-tag-count="2"
             />
           </template>
         </n-data-table>
@@ -181,7 +183,8 @@ import {
   NTooltip
 } from 'naive-ui'
 import TheIcon from '@/components/icon/TheIcon.vue'
-import { mockDetailApi } from '@/mock/pcb-detail'
+// import { mockDetailApi } from '@/mock/pcb-detail'
+import api from '@/api'
 import QualitativeIndicator from './components/QualitativeIndicator.vue'
 import QuantitativeIndicator from './components/QuantitativeIndicator.vue'
 import LimitingIndicator from './components/LimitingIndicator.vue'
@@ -217,94 +220,94 @@ const auditTreeData = ref([])
 // 64项指标的具体定义 - 严格按照PCB具体内容技术方案.md
 const indicators = [
   // 指标1-6: 生产工艺与装备要求（定性判断）
-  { id: 1, name: '基本要求', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 2, name: '机械加工及辅助设施', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 3, name: '线路与阻焊图形形成(印刷或感光工艺)', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 4, name: '板面清洗', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 5, name: '蚀刻', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 6, name: '电镀与化学镀', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 1, name: '基本要求', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 2, name: '机械加工及辅助设施', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 3, name: '线路与阻焊图形形成(印刷或感光工艺)', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 4, name: '板面清洗', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 5, name: '蚀刻', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 6, name: '电镀与化学镀', category: '生产工艺与装备要求', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标7-14: 能源消耗 - 单位产品电耗（定量计算与自动评估）
-  { id: 7, name: '刚性印制电路单面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 8, name: '刚性印制电路双面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 9, name: '刚性印制电路多层板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 10, name: '刚性印制电路HDI板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 11, name: '挠性印制电路单面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 12, name: '挠性印制电路双面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 13, name: '挠性印制电路多层板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 14, name: '挠性印制电路HDI板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 7, name: '刚性印制电路单面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 8, name: '刚性印制电路双面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 9, name: '刚性印制电路多层板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 10, name: '刚性印制电路HDI板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 11, name: '挠性印制电路单面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 12, name: '挠性印制电路双面板(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 13, name: '挠性印制电路多层板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 14, name: '挠性印制电路HDI板(2+n)层(单位产品电耗)', category: '能源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kWh/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标15-19: 水资源消耗（定量计算与自动评估）
-  { id: 15, name: '单面板(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 16, name: '双面板(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 17, name: '多层板(2+n)层(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 18, name: 'HDI板(2+n)层(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 19, name: '水资源重复利用率', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 15, name: '单面板(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 16, name: '双面板(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 17, name: '多层板(2+n)层(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 18, name: 'HDI板(2+n)层(单位产品新鲜水耗)', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 19, name: '水资源重复利用率', category: '水资源消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标20-27: 原/辅料消耗 - 覆铜板利用率（定量计算与自动评估）
-  { id: 20, name: '刚性印制电路单面板 覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 21, name: '刚性印制电路双面板 覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 22, name: '刚性印制电路多层板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 23, name: '刚性印制电路HDI板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 24, name: '挠性印制电路单面板覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 25, name: '挠性印制电路双面板 覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 26, name: '挠性性印制电路多层板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 27, name: '挠性印制电路HDI板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 20, name: '刚性印制电路单面板 覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 21, name: '刚性印制电路双面板 覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 22, name: '刚性印制电路多层板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 23, name: '刚性印制电路HDI板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 24, name: '挠性印制电路单面板覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 25, name: '挠性印制电路双面板 覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 26, name: '挠性性印制电路多层板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 27, name: '挠性印制电路HDI板(2+n)层覆铜板利用率', category: '原/辅料消耗', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标28-29: 资源综合利用（定量自动评估）
-  { id: 28, name: '金属铜回收率', category: '资源综合利用', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 29, name: '一般工业固体废物综合利用率', category: '资源综合利用', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 28, name: '金属铜回收率', category: '资源综合利用', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 29, name: '一般工业固体废物综合利用率', category: '资源综合利用', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: '%', weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标30-41: 废水的产生与排放（定量计算与自动评估）
-  { id: 30, name: '单面板废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 31, name: '双面板废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 32, name: '多层板(2+n)层废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 33, name: 'HDI板(2+n)层废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 34, name: '单面板废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 35, name: '双面板废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 36, name: '多层板(2+n)层废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 37, name: 'HDI板(2+n)层废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 38, name: '单面板废水中COD产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 39, name: '双面板废水废水中COD产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 40, name: '多层板(2+n)层废水中 COD 产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 41, name: 'HDI板(2+n)层废水中 COD 产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 30, name: '单面板废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 31, name: '双面板废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 32, name: '多层板(2+n)层废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 33, name: 'HDI板(2+n)层废水产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'm³/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 34, name: '单面板废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 35, name: '双面板废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 36, name: '多层板(2+n)层废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 37, name: 'HDI板(2+n)层废水中铜产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 38, name: '单面板废水中COD产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 39, name: '双面板废水废水中COD产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 40, name: '多层板(2+n)层废水中 COD 产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 41, name: 'HDI板(2+n)层废水中 COD 产生量', category: '废水的产生与排放', type: 'quantitative', level: null, score: 0, isLimiting: false, unit: 'kg/m²', weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标42: 废水的产生与排放 - 定性指标
-  { id: 42, name: '废水收集与处理', category: '废水的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 42, name: '废水收集与处理', category: '废水的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标43: 废气的产生与排放（定性判断）
-  { id: 43, name: '废气收集与处理', category: '废气的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 43, name: '废气收集与处理', category: '废气的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标44-45: 固体废物的产生与排放（定性判断）
-  { id: 44, name: '一般固体废物收集与处理', category: '固体废物的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 45, name: '危险废物收集与处理', category: '固体废物的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 44, name: '一般固体废物收集与处理', category: '固体废物的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 45, name: '危险废物收集与处理', category: '固体废物的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标46: 噪声的产生与排放（定性判断）
-  { id: 46, name: '噪声', category: '噪声的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 46, name: '噪声', category: '噪声的产生与排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标47-49: 温室气体排放（定性/定量混合评估）
-  { id: 47, name: '碳减排管理', category: '温室气体排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 48, name: '单位产值碳排放量', category: '温室气体排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 49, name: '碳排放强度', category: '温室气体排放', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 1.8, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 47, name: '碳减排管理', category: '温室气体排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 48, name: '单位产值碳排放量', category: '温室气体排放', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 49, name: '碳排放强度', category: '温室气体排放', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 1.8, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标50-53: 产品特征（定性判断）
-  { id: 50, name: '使用无毒无害或低毒低害的生产辅助材料', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 51, name: '包装', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 52, name: '有害物质限制使用', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 53, name: '产品性能', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedScheme: null },
+  { id: 50, name: '使用无毒无害或低毒低害的生产辅助材料', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 51, name: '包装', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 52, name: '有害物质限制使用', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 53, name: '产品性能', category: '产品特征', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 1.5, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
   
   // 指标54-64: 清洁生产管理（定性/定量/限定性混合评估）
-  { id: 54, name: '*环保法律法规执行情况', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 55, name: '*产业政策符合性', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 56, name: '清洁生产管理', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 57, name: '清洁生产审核', category: '清洁生产管理', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 58, name: '节能管理', category: '清洁生产管理', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 59, name: '污染物排放监测', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 60, name: '*危险化学品管理', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 61, name: '计量器具配备情况', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 62, name: '*固体废物处理处置', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 63, name: '土壤污染隐患排查', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null },
-  { id: 64, name: '运输方式', category: '清洁生产管理', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedScheme: null }
+  { id: 54, name: '*环保法律法规执行情况', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 55, name: '*产业政策符合性', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 56, name: '清洁生产管理', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 57, name: '清洁生产审核', category: '清洁生产管理', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 58, name: '节能管理', category: '清洁生产管理', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 59, name: '污染物排放监测', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 60, name: '*危险化学品管理', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 61, name: '计量器具配备情况', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 62, name: '*固体废物处理处置', category: '清洁生产管理', type: 'limiting', level: null, score: 0, isLimiting: true, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 63, name: '土壤污染隐患排查', category: '清洁生产管理', type: 'qualitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] },
+  { id: 64, name: '运输方式', category: '清洁生产管理', type: 'quantitative', level: null, score: 0, isLimiting: false, weight: 2.0, currentValue: null, recommendedSchemes: [], selectedSchemes: [] }
 ]
 
 // 表格列定义
@@ -794,8 +797,21 @@ const getProgressColor = (score) => {
 const fetchAuditData = async () => {
   try {
     loading.value = true
-    const response = await mockDetailApi.getAuditResults(props.enterpriseId)
-    const data = response.data || indicators
+    const response = await api.pcb.audit.getResults(props.enterpriseId)
+    const data = response.data || []
+    
+    // 为每个指标加载推荐方案
+    for (const indicator of data) {
+      if (!indicator.isCategory && indicator.indicator) {
+        try {
+          const schemesResponse = await api.pcb.scheme.getByEnterpriseIndicator(props.enterpriseId, indicator.indicator.id)
+          indicator.recommendedSchemes = schemesResponse.data || []
+        } catch (error) {
+          console.error(`获取指标${indicator.indicator.id}的推荐方案失败:`, error)
+          indicator.recommendedSchemes = []
+        }
+      }
+    }
     
     // 构建树形结构
     auditTreeData.value = buildTreeData(data)
@@ -803,7 +819,7 @@ const fetchAuditData = async () => {
   } catch (error) {
     console.error('获取审核数据失败:', error)
     window.$message.error('获取审核数据失败')
-    auditTreeData.value = buildTreeData(indicators)
+    auditTreeData.value = buildTreeData([])
   } finally {
     loading.value = false
   }
@@ -841,7 +857,7 @@ const buildTreeData = (data) => {
       weight: item.weight || getDefaultWeight(item.category),
       currentValue: item.currentValue || null,
       recommendedSchemes: item.recommendedSchemes || [],
-      selectedScheme: item.selectedScheme || null,
+      selectedSchemes: item.selectedSchemes || [],
       isCategory: false,
       key: `indicator-${item.id}`
     }

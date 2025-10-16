@@ -7,6 +7,8 @@ from .auditlog import auditlog_router
 from .base import base_router
 from .depts import depts_router
 from .menus import menus_router
+from .pcb import pcb_router
+from .pcb_planning import router as pcb_planning_router
 from .roles import roles_router
 from .users import users_router
 
@@ -19,3 +21,5 @@ v1_router.include_router(menus_router, prefix="/menu", dependencies=[DependPermi
 v1_router.include_router(apis_router, prefix="/api", dependencies=[DependPermission])
 v1_router.include_router(depts_router, prefix="/dept", dependencies=[DependPermission])
 v1_router.include_router(auditlog_router, prefix="/auditlog", dependencies=[DependPermission])
+v1_router.include_router(pcb_router, prefix="/pcb", dependencies=[DependPermission])
+v1_router.include_router(pcb_planning_router, prefix="/pcb", dependencies=[DependPermission])

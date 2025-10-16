@@ -2,16 +2,16 @@
   <n-card class="enterprise-card" hoverable>
     <div class="card-header">
       <h3>{{ enterprise.name }}</h3>
-      <n-tag :type="getStatusType(enterprise.auditStatus)">
-        {{ getStatusText(enterprise.auditStatus) }}
+      <n-tag :type="getStatusType(enterprise.audit_status)">
+        {{ getStatusText(enterprise.audit_status) }}
       </n-tag>
     </div>
     
     <div class="card-content">
-      <p><strong>所属地市：</strong>{{ enterprise.city }}</p>
-      <p><strong>所属县：</strong>{{ enterprise.county }}</p>
-      <p><strong>规模：</strong>{{ enterprise.scale }}</p>
-      <p><strong>年产值：</strong>{{ enterprise.annualOutput }}万元</p>
+      <p><strong>所属地市：</strong>{{ enterprise.region }}</p>
+      <p><strong>所属县：</strong>{{ enterprise.district }}</p>
+      <p><strong>注册资本：</strong>{{ enterprise.capital }}万元</p>
+      <p><strong>年产能：</strong>{{ enterprise.capacity }}万m²</p>
     </div>
     
     <div class="card-footer">

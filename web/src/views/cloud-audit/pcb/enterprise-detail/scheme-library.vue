@@ -21,7 +21,7 @@
         size="small"
         :pagination="{
           page: 1,
-          pageSize: 20,
+          page_size: 20,
           pageSizes: [10, 20, 50, 100, 200],
           showSizePicker: true,
           prefix({ itemCount }) {
@@ -34,12 +34,26 @@
             <n-input v-model:value="queryItems.name" placeholder="请输入方案名称" />
           </QueryBarItem>
           <QueryBarItem label="关联指标">
-            <n-tree-select 
+            <n-select
               v-model:value="queryItems.indicatorIds"
-              :options="indicatorTreeOptions"
+              :options="indicatorOptions"
               multiple
-              checkable
-              placeholder="请选择关联指标"
+              filterable
+              clearable
+              :placeholder="selectedIndicatorCount > 0 ? `已选择${selectedIndicatorCount}个指标` : '请选择关联指标（支持搜索）'"
+              :max-tag-count="2"
+              style="width: 350px"
+              :render-tag="({ option, handleClose }) => {
+                return h('span', {
+                  style: 'margin-right: 4px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 4px; padding: 2px 6px; font-size: 12px;'
+                }, [
+                  h('span', `${option.label}`),
+                  h('span', {
+                    style: 'margin-left: 4px; cursor: pointer; color: #0ea5e9; font-weight: bold;',
+                    onClick: handleClose
+                  }, '×')
+                ])
+              }"
             />
           </QueryBarItem>
         </template>
@@ -76,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, h, nextTick } from 'vue'
+import { ref, onMounted, h, nextTick, computed } from 'vue'
 import { 
   NCard, 
   NButton, 
@@ -90,7 +104,8 @@ import CrudTable from '@/components/table/CrudTable.vue'
 import CrudModal from '@/components/table/CrudModal.vue'
 import QueryBarItem from '@/components/query-bar/QueryBarItem.vue'
 import SchemeForm from './components/SchemeForm.vue'
-import { mockDetailApi } from '@/mock/pcb-detail'
+// import { mockDetailApi } from '@/mock/pcb-detail'
+import api from '@/api'
 
 defineOptions({ name: '方案库' })
 
@@ -115,7 +130,107 @@ const queryItems = ref({
   indicatorIds: []
 })
 
-// 指标树选项
+// 计算已选择的指标数量
+const selectedIndicatorCount = computed(() => {
+  return queryItems.value.indicatorIds.length
+})
+
+// 计算已选择的指标名称
+const selectedIndicatorNames = computed(() => {
+  return queryItems.value.indicatorIds.map(id => {
+    const option = indicatorOptions.value.find(opt => opt.value === id)
+    return option ? option.label : `指标${id}`
+  })
+})
+
+// 扁平化的指标选项列表（用于可搜索下拉框）
+const indicatorOptions = ref([
+  // 生产工艺与装备要求
+  { label: '基本要求', value: 1 },
+  { label: '机械加工及辅助设施', value: 2 },
+  { label: '线路与阻焊图形形成(印刷或感光工艺)', value: 3 },
+  { label: '板面清洗', value: 4 },
+  { label: '蚀刻', value: 5 },
+  { label: '电镀与化学镀', value: 6 },
+  
+  // 能源消耗
+  { label: '刚性印制电路单面板(单位产品电耗)', value: 7 },
+  { label: '刚性印制电路双面板(单位产品电耗)', value: 8 },
+  { label: '刚性印制电路多层板(2+n)层(单位产品电耗)', value: 9 },
+  { label: '刚性印制电路HDI板(2+n)层(单位产品电耗)', value: 10 },
+  { label: '挠性印制电路单面板(单位产品电耗)', value: 11 },
+  { label: '挠性印制电路双面板(单位产品电耗)', value: 12 },
+  { label: '挠性印制电路多层板(2+n)层(单位产品电耗)', value: 13 },
+  { label: '挠性印制电路HDI板(2+n)层(单位产品电耗)', value: 14 },
+  
+  // 水资源消耗
+  { label: '单面板(单位产品新鲜水耗)', value: 15 },
+  { label: '双面板(单位产品新鲜水耗)', value: 16 },
+  { label: '多层板(2+n)层(单位产品新鲜水耗)', value: 17 },
+  { label: 'HDI板(2+n)层(单位产品新鲜水耗)', value: 18 },
+  { label: '水资源重复利用率', value: 19 },
+  
+  // 原/辅料消耗
+  { label: '刚性印制电路单面板 覆铜板利用率', value: 20 },
+  { label: '刚性印制电路双面板 覆铜板利用率', value: 21 },
+  { label: '刚性印制电路多层板(2+n)层覆铜板利用率', value: 22 },
+  { label: '刚性印制电路HDI板(2+n)层覆铜板利用率', value: 23 },
+  { label: '挠性印制电路单面板覆铜板利用率', value: 24 },
+  { label: '挠性印制电路双面板 覆铜板利用率', value: 25 },
+  { label: '挠性性印制电路多层板(2+n)层覆铜板利用率', value: 26 },
+  { label: '挠性印制电路HDI板(2+n)层覆铜板利用率', value: 27 },
+  
+  // 资源综合利用
+  { label: '金属铜回收率', value: 28 },
+  { label: '一般工业固体废物综合利用率', value: 29 },
+  
+  // 废水的产生与排放
+  { label: '单面板废水产生量', value: 30 },
+  { label: '双面板废水产生量', value: 31 },
+  { label: '多层板(2+n)层废水产生量', value: 32 },
+  { label: 'HDI板(2+n)层废水产生量', value: 33 },
+  { label: '单面板废水中铜产生量', value: 34 },
+  { label: '双面板废水中铜产生量', value: 35 },
+  { label: '多层板(2+n)层废水中铜产生量', value: 36 },
+  { label: 'HDI板(2+n)层废水中铜产生量', value: 37 },
+  { label: '单面板废水中COD产生量', value: 38 },
+  { label: '双面板废水废水中COD产生量', value: 39 },
+  { label: '多层板(2+n)层废水中 COD 产生量', value: 40 },
+  { label: 'HDI板(2+n)层废水中 COD 产生量', value: 41 },
+  { label: '废水收集与处理', value: 42 },
+  
+  // 废气的产生与排放
+  { label: '废气收集与处理', value: 43 },
+  { label: '废气中颗粒物产生量', value: 44 },
+  { label: '废气中VOCs产生量', value: 45 },
+  { label: '废气中酸雾产生量', value: 46 },
+  
+  // 温室气体排放
+  { label: '单位产品CO2排放量', value: 47 },
+  { label: '单位产品N2O排放量', value: 48 },
+  { label: '单位产品CH4排放量', value: 49 },
+  
+  // 产品特征
+  { label: '产品合格率', value: 50 },
+  { label: '产品返修率', value: 51 },
+  { label: '产品报废率', value: 52 },
+  { label: '产品包装材料使用量', value: 53 },
+  
+  // 清洁生产管理
+  { label: '环保法律法规执行情况', value: 54 },
+  { label: '环境管理体系认证', value: 55 },
+  { label: '清洁生产审核', value: 56 },
+  { label: '清洁生产审核', value: 57 },
+  { label: '节能管理', value: 58 },
+  { label: '环境信息公开', value: 59 },
+  { label: '环境风险管控', value: 60 },
+  { label: '环境监测', value: 61 },
+  { label: '环境应急管理', value: 62 },
+  { label: '环境培训', value: 63 },
+  { label: '环境投入', value: 64 }
+])
+
+// 保留原有的树形结构（用于其他功能）
 const indicatorTreeOptions = ref([
   {
     label: '生产工艺与装备要求',
@@ -323,10 +438,10 @@ const schemeColumns = [
 // 获取方案列表
 const getSchemeList = async (params) => {
   try {
-    const response = await mockDetailApi.getSchemes(props.enterpriseId, params)
+    const response = await api.pcb.scheme.getList(params)
     // CrudTable期望的格式：{ data: [], total: number }
     return {
-      data: response.data.list || [],
+      data: response.data.items || [],
       total: response.data.total || 0
     }
   } catch (error) {
@@ -339,7 +454,7 @@ const getSchemeList = async (params) => {
 // 获取指标树数据
 const fetchIndicatorTree = async () => {
   try {
-    const response = await mockDetailApi.getIndicatorTree()
+    const response = await api.pcb.indicator.getTree()
     indicatorTreeOptions.value = response.data
   } catch (error) {
     console.error('获取指标树失败:', error)
@@ -351,10 +466,10 @@ const handleSaveScheme = async () => {
   try {
     const formData = await schemeFormRef.value.validate()
     if (isEdit.value) {
-      await mockDetailApi.updateScheme(props.enterpriseId, currentScheme.value.id, formData)
+      await api.pcb.scheme.update(currentScheme.value.id, formData)
       window.$message.success('方案更新成功')
     } else {
-      await mockDetailApi.createScheme(props.enterpriseId, formData)
+      await api.pcb.scheme.create(formData)
       window.$message.success('方案添加成功')
     }
     showAddModal.value = false
@@ -429,6 +544,49 @@ onMounted(() => {
 
 :deep(.n-form-item) {
   margin-bottom: 20px;
+}
+
+/* 优化选择器样式 */
+:deep(.n-select) {
+  .n-base-selection {
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
+  
+  .n-base-selection:hover {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+  }
+  
+  .n-base-selection--focused {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+  }
+}
+
+/* 优化下拉选项样式 */
+:deep(.n-select-menu) {
+  .n-base-select-option {
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .n-base-select-option:hover {
+    background-color: #f0f9ff;
+  }
+  
+  .n-base-select-option--selected {
+    background-color: #e0f2fe;
+    color: #0ea5e9;
+  }
+}
+
+/* 优化搜索框样式 */
+:deep(.n-base-selection-input) {
+  .n-input {
+    border: none;
+    box-shadow: none;
+  }
 }
 
 :deep(.n-form-item-label) {

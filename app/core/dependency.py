@@ -45,8 +45,28 @@ class PermissionControl:
         permission_apis = list(set((api.method, api.path) for api in sum(apis, [])))
         # path = "/api/v1/auth/userinfo"
         # method = "GET"
-        if (method, path) not in permission_apis:
-            raise HTTPException(status_code=403, detail=f"Permission denied method:{method} path:{path}")
+        
+        # 检查精确匹配
+        if (method, path) in permission_apis:
+            return
+            
+        # 检查路径参数匹配
+        for api_method, api_path in permission_apis:
+            if api_method == method and cls._match_path(api_path, path):
+                return
+                
+        raise HTTPException(status_code=403, detail=f"Permission denied method:{method} path:{path}")
+    
+    @classmethod
+    def _match_path(cls, api_path: str, request_path: str) -> bool:
+        """匹配路径参数"""
+        import re
+        # 将API路径转换为正则表达式
+        # 例如: /api/v1/pcb/enterprise/{enterprise_id}/leadership-team
+        # 转换为: /api/v1/pcb/enterprise/[^/]+/leadership-team
+        pattern = re.sub(r'\{[^}]+\}', r'[^/]+', api_path)
+        pattern = f"^{pattern}$"
+        return bool(re.match(pattern, request_path))
 
 
 DependAuth = Depends(AuthControl.is_authed)

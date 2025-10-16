@@ -20,6 +20,16 @@ export default {
         icon: 'carbon:industry'
       }
     },
+    // 钢铁企业详情
+    {
+      path: 'steel/:id',
+      name: 'SteelDetail',
+      component: () => import('@/views/cloud-audit/steel/enterprise-detail/index.vue'),
+      meta: { 
+        title: '钢铁企业详情',
+        hidden: true
+      }
+    },
     // 平板玻璃行业审核
     {
       path: 'glass',

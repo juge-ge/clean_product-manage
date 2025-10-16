@@ -110,12 +110,15 @@ import PreAudit from './enterprise-detail/pre-audit.vue'
 import Audit from './enterprise-detail/audit.vue'
 import SchemeLibrary from './enterprise-detail/scheme-library.vue'
 import Report from './enterprise-detail/report.vue'
-import { mockApi } from '@/mock/pcb'
-import { mockDetailApi } from '@/mock/pcb-detail'
+// import { mockApi } from '@/mock/pcb'
+// import { mockDetailApi } from '@/mock/pcb-detail'
+import api from '@/api'
 
 defineOptions({ name: 'PCB行业审核' })
 
 const router = useRouter()
+// 子表单实例（用于创建/编辑模态框）
+const formRef = ref(null)
 const searchKeyword = ref('')
 const showCreateModal = ref(false)
 const isEdit = ref(false)
@@ -137,10 +140,12 @@ const auditSteps = [
 // 获取企业列表
 const fetchEnterprises = async () => {
   try {
-    const response = await mockApi.getEnterpriseList({
-      search: searchKeyword.value
+    const response = await api.pcb.enterprise.getList({
+      search: searchKeyword.value,
+      page: 1,
+      page_size: 100
     })
-    enterprises.value = response.data
+    enterprises.value = response.data.items || []
   } catch (error) {
     console.error('获取企业列表失败:', error)
     window.$message.error('获取企业列表失败')
@@ -151,7 +156,7 @@ const fetchEnterprises = async () => {
 const handleView = async (id) => {
   try {
     loading.value = true
-    const response = await mockApi.getEnterpriseDetail(id)
+    const response = await api.pcb.enterprise.getDetail(id)
     // 等待DOM更新完成
     await nextTick()
     // 设置企业信息
@@ -269,7 +274,7 @@ const handleDelete = async (id) => {
       title: '确认删除',
       content: '确定要删除该企业吗？此操作不可恢复。'
     })
-    await mockApi.deleteEnterprise(id)
+    await api.pcb.enterprise.delete(id)
     window.$message.success('删除成功')
     fetchEnterprises()
   } catch (error) {
@@ -280,27 +285,60 @@ const handleDelete = async (id) => {
   }
 }
 
-// 保存企业
+// 保存企业（从子表单收集并校验数据）
 const handleSave = async () => {
   try {
-    if (isEdit.value) {
-      await mockApi.updateEnterprise(currentEnterprise.value.id, currentEnterprise.value)
-    } else {
-      await mockApi.createEnterprise(currentEnterprise.value)
+    // 1) 先校验子表单
+    await formRef.value?.formRef?.validate();
+
+    // 2) 从子表单拿到实时数据（formData 是 ref，直接访问 .value）
+    const raw = { ...(formRef.value?.formData || {}) };
+    console.log('raw from child =', raw);
+
+    // 3) 按后端Schema映射成请求体（关键）
+    const trim = v => typeof v === 'string' ? v.trim() : v;
+    const payload = {
+      name: trim(raw.name),                         // 企业名称（必填）
+      unified_social_credit_code: trim(raw.unifiedSocialCreditCode), // 统一社会信用代码
+      region: trim(raw.region),                     // 地市
+      district: trim(raw.district),                 // 区县
+      address: trim(raw.address),                   // 注册地址
+      legal_representative: trim(raw.legalRepresentative), // 法人代表
+      contact_person: trim(raw.contactPerson),      // 联系人
+      contact_phone: raw.contactPhone ? String(raw.contactPhone).trim() : undefined, // 联系电话
+      contact_email: trim(raw.contactEmail),        // 联系邮箱
+      industry_type: trim(raw.industryType),        // 行业类型
+      capital: raw.capital ? Number(raw.capital) : undefined, // 注册资本(万元)
+      capacity: raw.capacity ? Number(raw.capacity) : undefined, // 年产能(万m²)
+    };
+    console.log('payload to submit =', payload);
+
+    if (!payload.name) {
+      window.$message.error('请填写企业名称');
+      return;
     }
-    window.$message.success('保存成功')
-    showCreateModal.value = false
-    fetchEnterprises()
+
+    // 4) 调用API
+    if (isEdit.value && currentEnterprise.value?.id) {
+      await api.pcb.enterprise.update(currentEnterprise.value.id, payload);
+    } else {
+      await api.pcb.enterprise.create(payload);
+    }
+
+    window.$message.success('保存成功');
+    showCreateModal.value = false;
+    await fetchEnterprises();
   } catch (error) {
-    console.error('保存失败:', error)
-    window.$message.error('保存失败')
+    console.error('保存失败:', error);
+    window.$message.error('保存失败');
   }
 }
 
 // 处理各模块更新
 const handleInfoUpdate = async (data) => {
   try {
-    await mockApi.updateEnterprise(currentEnterprise.value.id, data)
+    const payload = buildEnterprisePayload(data)
+    await api.pcb.enterprise.update(currentEnterprise.value.id, payload)
     window.$message.success('企业信息更新成功')
     // 更新当前企业信息
     currentEnterprise.value = { ...currentEnterprise.value, ...data }
@@ -310,9 +348,36 @@ const handleInfoUpdate = async (data) => {
   }
 }
 
+// 将前端表单字段映射为后端Schema所需字段，并去除无关字段
+const buildEnterprisePayload = (raw) => {
+  if (!raw) return {}
+  const trim = v => typeof v === 'string' ? v.trim() : v;
+  const toNumber = (v) => {
+    if (v === null || v === undefined || v === '') return undefined
+    const n = Number(v)
+    return Number.isFinite(n) ? n : undefined
+  }
+  return {
+    // 基础必填
+    name: trim(raw.name),
+    unified_social_credit_code: trim(raw.unifiedSocialCreditCode),
+    region: trim(raw.region),
+    district: trim(raw.district),
+    address: trim(raw.address),
+    legal_representative: trim(raw.legalRepresentative),
+    contact_person: trim(raw.contactPerson),
+    contact_phone: raw.contactPhone ? String(raw.contactPhone).trim() : undefined,
+    contact_email: trim(raw.contactEmail),
+    industry_type: trim(raw.industryType),
+    capital: toNumber(raw.capital),
+    capacity: toNumber(raw.capacity),
+  }
+}
+
 const handlePlanningUpdate = async (data) => {
   try {
-    await mockDetailApi.updateAuditTeam(currentEnterprise.value.id, data)
+    // TODO: 实现筹划与组织API
+    // await api.pcb.planning.update(currentEnterprise.value.id, data)
     window.$message.success('筹划与组织信息更新成功')
   } catch (error) {
     console.error('更新失败:', error)
@@ -322,7 +387,7 @@ const handlePlanningUpdate = async (data) => {
 
 const handlePreAuditUpdate = async (data) => {
   try {
-    await mockDetailApi.submitPreAuditData(currentEnterprise.value.id, data)
+    await api.pcb.preAudit.saveData(currentEnterprise.value.id, data)
     window.$message.success('预审核数据更新成功')
   } catch (error) {
     console.error('更新失败:', error)
@@ -332,7 +397,7 @@ const handlePreAuditUpdate = async (data) => {
 
 const handleAuditUpdate = async (data) => {
   try {
-    await mockDetailApi.submitAuditResults(currentEnterprise.value.id, data)
+    await api.pcb.audit.batchUpdate(currentEnterprise.value.id, data)
     window.$message.success('审核结果更新成功')
   } catch (error) {
     console.error('更新失败:', error)
@@ -342,7 +407,7 @@ const handleAuditUpdate = async (data) => {
 
 const handleSchemeUpdate = async (data) => {
   try {
-    await mockDetailApi.updateScheme(currentEnterprise.value.id, data.id, data)
+    await api.pcb.enterpriseScheme.update(currentEnterprise.value.id, data.id, data)
     window.$message.success('方案更新成功')
   } catch (error) {
     console.error('更新失败:', error)
@@ -352,7 +417,7 @@ const handleSchemeUpdate = async (data) => {
 
 const handleReportUpdate = async (data) => {
   try {
-    await mockDetailApi.generateReport(currentEnterprise.value.id, data)
+    await api.pcb.report.generate(currentEnterprise.value.id, data)
     window.$message.success('报告更新成功')
   } catch (error) {
     console.error('更新失败:', error)
