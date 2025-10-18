@@ -72,10 +72,11 @@ async def update_leadership_team_member(
 @router.delete("/enterprise/{enterprise_id}/leadership-team/{member_id}", summary="删除领导小组成员")
 async def delete_leadership_team_member(enterprise_id: int, member_id: int):
     """删除领导小组成员"""
-    success = await pcb_leadership_team_controller.delete(id=member_id)
-    if not success:
+    try:
+        await pcb_leadership_team_controller.remove(id=member_id)
+        return Success(msg="成员删除成功")
+    except Exception:
         raise HTTPException(status_code=404, detail="成员不存在")
-    return Success(msg="成员删除成功")
 
 
 # ==================== 工作小组 API ====================
@@ -113,10 +114,11 @@ async def update_work_team_member(
 @router.delete("/enterprise/{enterprise_id}/work-team/{member_id}", summary="删除工作小组成员")
 async def delete_work_team_member(enterprise_id: int, member_id: int):
     """删除工作小组成员"""
-    success = await pcb_work_team_controller.delete(id=member_id)
-    if not success:
+    try:
+        await pcb_work_team_controller.remove(id=member_id)
+        return Success(msg="成员删除成功")
+    except Exception:
         raise HTTPException(status_code=404, detail="成员不存在")
-    return Success(msg="成员删除成功")
 
 
 # ==================== 工作计划 API ====================
@@ -161,10 +163,11 @@ async def reorder_work_plans(enterprise_id: int):
 @router.delete("/enterprise/{enterprise_id}/work-plans/{plan_id}", summary="删除工作计划")
 async def delete_work_plan(enterprise_id: int, plan_id: int):
     """删除工作计划"""
-    success = await pcb_work_plan_controller.delete(id=plan_id)
-    if not success:
+    try:
+        await pcb_work_plan_controller.remove(id=plan_id)
+        return Success(msg="工作计划删除成功")
+    except Exception:
         raise HTTPException(status_code=404, detail="工作计划不存在")
-    return Success(msg="工作计划删除成功")
 
 
 # ==================== 培训记录 API ====================
@@ -287,11 +290,11 @@ async def delete_training_record(enterprise_id: int, record_id: int):
             pass
     
     # 删除记录
-    success = await pcb_training_record_controller.delete(id=record_id)
-    if not success:
+    try:
+        await pcb_training_record_controller.remove(id=record_id)
+        return Success(msg="培训记录删除成功")
+    except Exception:
         raise HTTPException(status_code=404, detail="培训记录不存在")
-    
-    return Success(msg="培训记录删除成功")
 
 
 @router.delete("/enterprise/{enterprise_id}/training-records/{record_id}/images/{image_id}", summary="删除培训记录图片")

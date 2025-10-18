@@ -382,6 +382,240 @@ Content-Type: multipart/form-data
    - 支持更多培训类型
    - 预留API版本升级空间
 
+## 8. 实际开发中遇到的问题与解决方案
+
+### 8.1 删除功能500错误问题
+
+#### 问题描述
+在实现领导小组和工作小组的删除功能时，前端调用删除API返回500内部服务器错误。
+
+#### 错误信息
+```
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+DELETE http://localhost:3100/api/v1/pcb/enterprise/7/work-team/5
+```
+
+#### 根本原因
+后端控制器中调用了不存在的`delete`方法，而基础CRUD类提供的是`remove`方法。
+
+#### 解决方案
+1. **后端API修复**：
+   ```python
+   # 修复前（错误）
+   success = await pcb_work_team_controller.delete(id=member_id)
+   
+   # 修复后（正确）
+   try:
+       await pcb_work_team_controller.remove(id=member_id)
+       return Success(msg="成员删除成功")
+   except Exception:
+       raise HTTPException(status_code=404, detail="成员不存在")
+   ```
+
+2. **控制器方法补充**：
+   ```python
+   async def remove(self, id: int) -> None:
+       """删除成员（覆盖基类，提供更明确的接口）"""
+       await super().remove(id=id)
+   ```
+
+#### 经验总结
+- 确保后端API方法调用与基础CRUD类提供的方法一致
+- 添加适当的异常处理，避免500错误暴露给前端
+- 删除操作失败时返回404而不是500，更符合RESTful规范
+
+### 8.2 日期格式处理问题
+
+#### 问题描述
+前端DatePicker组件出现"Invalid time value"错误，无法正确显示和编辑日期。
+
+#### 错误信息
+```
+Uncaught (in promise) RangeError: Invalid time value
+at format (index.js:349:11)
+at deriveSingleInputState (DatePicker.mjs:519:37)
+```
+
+#### 根本原因
+后端返回的日期是字符串格式，而前端DatePicker组件期望Date对象或时间戳。
+
+#### 解决方案
+1. **前端日期渲染修复**：
+   ```javascript
+   const renderPlannedStartDate = (row, index) => {
+     // 处理日期格式，确保DatePicker能正确显示
+     let dateValue = row.planned_start_date
+     if (dateValue && typeof dateValue === 'string') {
+       dateValue = new Date(dateValue)
+     }
+     
+     return h(NDatePicker, {
+       value: dateValue,
+       'onUpdate:value': (value) => {
+         workPlanStages.value[index].planned_start_date = value
+       },
+       type: 'date',
+       placeholder: '选择开始时间'
+     })
+   }
+   ```
+
+2. **编辑时日期格式转换**：
+   ```javascript
+   const editTraining = (record) => {
+     editingTrainingId.value = record.id
+     const formData = { ...record }
+     if (formData.date) {
+       if (typeof formData.date === 'string') {
+         formData.date = new Date(formData.date)
+       }
+     }
+     trainingForm.value = formData
+     showAddTrainingModal.value = true
+   }
+   ```
+
+3. **保存时日期格式转换**：
+   ```javascript
+   // 将日期转换为ISO字符串格式发送给后端
+   if (key === 'date' && value) {
+     if (typeof value === 'number') {
+       value = new Date(value).toISOString()
+     } else if (value instanceof Date) {
+       value = value.toISOString()
+     }
+   }
+   ```
+
+#### 经验总结
+- 前端DatePicker组件需要Date对象，后端通常返回字符串
+- 在数据绑定前进行格式转换
+- 保存时将Date对象转换为ISO字符串格式
+
+### 8.3 培训记录创建422错误问题
+
+#### 问题描述
+创建培训记录时返回422 Unprocessable Entity错误，提示date字段缺失。
+
+#### 错误信息
+```
+POST http://localhost:3100/api/v1/pcb/enterprise/7/training-records 422 (Unprocessable Entity)
+RequestValidationError: [{'type': 'missing', 'loc': ('body', 'date'), 'msg': 'Field required', 'input': None}]
+```
+
+#### 根本原因
+前端FormData没有正确包含必需的date字段，或者日期格式不正确。
+
+#### 解决方案
+1. **FormData字段确保**：
+   ```javascript
+   // 确保date字段存在
+   if (!formData.has('date') && trainingForm.value.date) {
+     let dateValue = trainingForm.value.date
+     if (typeof dateValue === 'number') {
+       dateValue = new Date(dateValue).toISOString()
+     } else if (dateValue instanceof Date) {
+       dateValue = dateValue.toISOString()
+     }
+     formData.append('date', dateValue)
+   }
+   ```
+
+2. **调试信息添加**：
+   ```javascript
+   // 调试：检查FormData内容
+   console.log('FormData contents:')
+   for (let [key, value] of formData.entries()) {
+     console.log(key, value)
+   }
+   ```
+
+#### 经验总结
+- 使用FormData时确保所有必需字段都被正确添加
+- 添加调试日志帮助排查数据传递问题
+- 后端schema验证严格，前端必须提供所有必需字段
+
+### 8.4 工作计划批量更新格式问题
+
+#### 问题描述
+工作计划批量更新时，后端期望特定的数据格式，前端直接传递数组导致更新失败。
+
+#### 根本原因
+后端API期望的请求体格式为`{ work_plans: [...] }`，而前端直接传递了数组。
+
+#### 解决方案
+```javascript
+// 修复前（错误）
+await api.pcb.planning.updateWorkPlans(enterpriseId.value, workPlanStages.value)
+
+// 修复后（正确）
+await api.pcb.planning.updateWorkPlans(enterpriseId.value, { work_plans: workPlanStages.value })
+```
+
+#### 经验总结
+- 严格按照后端API文档的数据格式要求传递数据
+- 批量操作通常需要包装在特定的数据结构中
+
+### 8.5 编辑模式与新增模式区分问题
+
+#### 问题描述
+培训记录编辑和新增使用同一个模态框，但数据提交方式不同，需要区分处理。
+
+#### 解决方案
+1. **状态管理**：
+   ```javascript
+   const editingTrainingId = ref(null)
+   
+   const editTraining = (record) => {
+     editingTrainingId.value = record.id
+     // ... 设置表单数据
+   }
+   ```
+
+2. **保存逻辑区分**：
+   ```javascript
+   if (editingTrainingId.value) {
+     // 编辑模式 - 发送JSON
+     await api.pcb.planning.updateTrainingRecord(enterpriseId.value, editingTrainingId.value, trainingForm.value)
+   } else {
+     // 新增模式 - 发送FormData（支持文件上传）
+     const formData = new FormData()
+     // ... 构建FormData
+     await api.pcb.planning.addTrainingRecord(enterpriseId.value, formData)
+   }
+   ```
+
+#### 经验总结
+- 编辑和新增可能需要不同的数据提交方式
+- 使用状态变量区分操作模式
+- 编辑通常使用JSON，新增可能需要FormData支持文件上传
+
+## 9. 开发最佳实践总结
+
+### 9.1 前后端协作规范
+1. **API设计一致性**：确保RESTful规范，方法命名统一
+2. **错误处理标准化**：使用统一的错误码和消息格式
+3. **数据格式约定**：明确日期、文件等特殊字段的格式要求
+4. **接口文档同步**：及时更新API文档，确保前后端理解一致
+
+### 9.2 前端开发注意事项
+1. **日期处理**：统一使用Date对象，保存时转换为ISO字符串
+2. **表单验证**：前端验证与后端schema保持一致
+3. **错误处理**：提供友好的错误提示，记录详细错误信息
+4. **调试支持**：关键操作添加日志，便于问题排查
+
+### 9.3 后端开发注意事项
+1. **CRUD方法一致性**：确保控制器方法与基础类方法对应
+2. **异常处理完善**：避免500错误，提供有意义的错误信息
+3. **数据验证严格**：使用Pydantic进行数据验证
+4. **接口测试充分**：使用Swagger UI进行接口测试
+
+### 9.4 测试策略
+1. **单元测试**：覆盖核心业务逻辑
+2. **集成测试**：测试前后端交互
+3. **接口测试**：使用自动化工具测试API
+4. **用户测试**：模拟真实用户操作流程
+
 ## 总结
 
 本方案提供了PCB筹划与组织模块的完整数据库设计和API接口方案，重点考虑了：
@@ -391,6 +625,7 @@ Content-Type: multipart/form-data
 3. **安全性**: 包含必要的安全措施
 4. **可扩展性**: 预留扩展空间
 5. **易用性**: 提供友好的接口调用方式
+6. **问题预防**: 基于实际开发经验，提供常见问题的解决方案
 
 建议按照以下步骤实施：
 1. 创建数据库表
@@ -398,3 +633,4 @@ Content-Type: multipart/form-data
 3. 进行接口测试
 4. 集成前端功能
 5. 进行完整性测试
+6. 参考问题解决方案进行优化

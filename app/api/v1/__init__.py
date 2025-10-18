@@ -9,6 +9,8 @@ from .depts import depts_router
 from .menus import menus_router
 from .pcb import pcb_router
 from .pcb_planning import router as pcb_planning_router
+from .pcb_production import router as pcb_production_router
+from .raw_material import router as raw_material_router
 from .roles import roles_router
 from .users import users_router
 
@@ -23,3 +25,5 @@ v1_router.include_router(depts_router, prefix="/dept", dependencies=[DependPermi
 v1_router.include_router(auditlog_router, prefix="/auditlog", dependencies=[DependPermission])
 v1_router.include_router(pcb_router, prefix="/pcb", dependencies=[DependPermission])
 v1_router.include_router(pcb_planning_router, prefix="/pcb", dependencies=[DependPermission])
+v1_router.include_router(pcb_production_router, prefix="/pcb", dependencies=[DependPermission])
+v1_router.include_router(raw_material_router, prefix="/raw-material", dependencies=[DependPermission])

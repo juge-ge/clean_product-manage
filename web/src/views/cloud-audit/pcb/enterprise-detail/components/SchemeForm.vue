@@ -4,9 +4,9 @@
       <n-input v-model:value="formData.name" placeholder="请输入方案名称" />
     </n-form-item>
     
-    <n-form-item label="方案类型" path="type">
+    <n-form-item label="方案类型" path="scheme_type">
       <n-select
-        v-model:value="formData.type"
+        v-model:value="formData.scheme_type"
         :options="typeOptions"
         placeholder="请选择方案类型"
       />
@@ -40,11 +40,29 @@
       />
     </n-form-item>
     
-    <n-form-item label="预期效果" path="expectedEffect">
+    <n-form-item label="解决的问题" path="problem">
       <n-input
-        v-model:value="formData.expectedEffect"
+        v-model:value="formData.problem"
         type="textarea"
-        placeholder="请输入预期效果"
+        placeholder="请输入解决的问题"
+        :rows="3"
+      />
+    </n-form-item>
+    
+    <n-form-item label="经济效益" path="economic_benefit">
+      <n-input
+        v-model:value="formData.economic_benefit"
+        type="textarea"
+        placeholder="请输入经济效益"
+        :rows="3"
+      />
+    </n-form-item>
+    
+    <n-form-item label="环境效益" path="environmental_benefit">
+      <n-input
+        v-model:value="formData.environmental_benefit"
+        type="textarea"
+        placeholder="请输入环境效益"
         :rows="3"
       />
     </n-form-item>
@@ -60,9 +78,9 @@
       </n-input-number>
     </n-form-item>
     
-    <n-form-item label="投资回收期" path="paybackPeriod">
+    <n-form-item label="投资回收期" path="payback_period">
       <n-input-number
-        v-model:value="formData.paybackPeriod"
+        v-model:value="formData.payback_period"
         placeholder="请输入投资回收期"
         :min="0"
         :precision="1"
@@ -100,14 +118,16 @@ const formRef = ref(null)
 const formData = computed({
   get: () => ({
     name: '',
-    type: '',
+    scheme_type: '',
     indicatorIds: [],
     description: '',
     implementation: '',
-    expectedEffect: '',
+    problem: '',
+    economic_benefit: '',
+    environmental_benefit: '',
     investment: null,
-    paybackPeriod: null,
-    status: 'active',
+    payback_period: null,
+    is_active: true,
     ...props.data
   }),
   set: (value) => emit('update:data', value)
@@ -115,11 +135,12 @@ const formData = computed({
 
 // 方案类型选项
 const typeOptions = [
-  { label: '节能降耗', value: '节能降耗' },
-  { label: '污染防治', value: '污染防治' },
-  { label: '资源综合利用', value: '资源综合利用' },
+  { label: '环保治理', value: '环保治理' },
+  { label: '技术改造', value: '技术改造' },
+  { label: '设备更新', value: '设备更新' },
   { label: '工艺改进', value: '工艺改进' },
-  { label: '设备更新', value: '设备更新' }
+  { label: '管理优化', value: '管理优化' },
+  { label: '资源综合利用', value: '资源综合利用' }
 ]
 
 // 指标树选项
@@ -172,19 +193,14 @@ const indicatorTreeOptions = ref([
 // 表单验证规则
 const rules = {
   name: { required: true, message: '请输入方案名称', trigger: 'blur' },
-  type: { required: true, message: '请选择方案类型', trigger: 'change' },
-  indicatorIds: { 
-    required: true, 
-    type: 'array', 
-    min: 1, 
-    message: '请选择至少一个关联指标', 
-    trigger: 'change' 
-  },
+  scheme_type: { required: true, message: '请选择方案类型', trigger: 'change' },
   description: { required: true, message: '请输入方案描述', trigger: 'blur' },
   implementation: { required: true, message: '请输入实施方案', trigger: 'blur' },
-  expectedEffect: { required: true, message: '请输入预期效果', trigger: 'blur' },
+  problem: { required: true, message: '请输入解决的问题', trigger: 'blur' },
+  economic_benefit: { required: true, message: '请输入经济效益', trigger: 'blur' },
+  environmental_benefit: { required: true, message: '请输入环境效益', trigger: 'blur' },
   investment: { required: true, message: '请输入投资估算', trigger: 'change' },
-  paybackPeriod: { required: true, message: '请输入投资回收期', trigger: 'change' }
+  payback_period: { required: true, message: '请输入投资回收期', trigger: 'change' }
 }
 
 // 监听数据变化

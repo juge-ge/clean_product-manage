@@ -3,6 +3,7 @@ PCB行业清洁生产审核模块API路由
 提供企业、指标、审核结果、方案的RESTful API接口
 """
 from typing import List, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -16,6 +17,7 @@ from app.controllers.pcb import (
     pcb_pre_audit_data_controller,
     pcb_scheme_controller,
 )
+from app.controllers.enterprise_raw_material import enterprise_raw_material_controller
 from app.models.pcb import PCBIndicator, PCBScheme
 from app.schemas.base import Success
 from app.schemas.pcb import (
@@ -315,17 +317,29 @@ async def update_indicator_audit(
 
 
 @pcb_router.post("/enterprise/{enterprise_id}/audit/batch", summary="批量更新审核结果")
-async def batch_update_audit_results(enterprise_id: int, results_data: List[dict]):
-    """批量更新多个指标的审核结果"""
+async def batch_update_audit_results(enterprise_id: int, audit_data: dict):
+    """批量更新多个指标的审核结果，包含方案选择"""
+    # 提取指标审核结果和选定的方案
+    indicators = audit_data.get("indicators", [])
+    selected_schemes = audit_data.get("selected_schemes", [])
+    auditor_name = audit_data.get("auditor_name", "系统")
+    audit_date = audit_data.get("audit_date")
+    
+    # 更新审核结果
     results = await pcb_audit_result_controller.batch_update_results(
-        enterprise_id=enterprise_id, results_data=results_data
+        enterprise_id=enterprise_id, results_data=indicators
     )
-
-    data = []
-    for result in results:
-        data.append(await result.to_dict())
-
-    return Success(data=data, msg="审核结果批量更新成功")
+    
+    # 保存选定的方案
+    if selected_schemes:
+        await pcb_enterprise_scheme_controller.save_selected_schemes(
+            enterprise_id=enterprise_id, selected_schemes=selected_schemes
+        )
+    
+    # 计算汇总数据
+    summary = await pcb_audit_result_controller.calculate_summary(enterprise_id)
+    
+    return Success(data=summary, msg="审核结果批量更新成功")
 
 
 @pcb_router.get("/enterprise/{enterprise_id}/audit/summary", summary="获取审核汇总")
@@ -411,7 +425,15 @@ async def get_scheme_detail(scheme_id: int):
 @pcb_router.post("/scheme", summary="创建方案")
 async def create_scheme(scheme: PCBSchemeCreate):
     """创建新的清洁生产方案"""
-    new_scheme = await pcb_scheme_controller.create(obj=scheme)
+    # 自动生成scheme_id
+    max_scheme = await PCBScheme.all().order_by('-scheme_id').first()
+    next_scheme_id = (max_scheme.scheme_id + 1) if max_scheme else 1
+    
+    # 创建方案数据
+    scheme_data = scheme.dict()
+    scheme_data['scheme_id'] = next_scheme_id
+    
+    new_scheme = await pcb_scheme_controller.create(obj=scheme_data)
     return Success(data=await new_scheme.to_dict(), msg="方案创建成功")
 
 
@@ -429,14 +451,17 @@ async def update_scheme(scheme_id: int, scheme: PCBSchemeUpdate):
 @pcb_router.delete("/scheme/{scheme_id}", summary="删除方案")
 async def delete_scheme(scheme_id: int):
     """删除方案（软删除，设置is_active=False）"""
-    existing_scheme = await pcb_scheme_controller.get_by_scheme_id(scheme_id)
-    if not existing_scheme:
-        raise HTTPException(status_code=404, detail="方案不存在")
+    try:
+        existing_scheme = await pcb_scheme_controller.get_by_scheme_id(scheme_id)
+        if not existing_scheme:
+            raise HTTPException(status_code=404, detail="方案不存在")
 
-    existing_scheme.is_active = False
-    await existing_scheme.save()
+        existing_scheme.is_active = False
+        await existing_scheme.save()
 
-    return Success(msg="方案删除成功")
+        return Success(msg="方案删除成功")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除方案失败: {str(e)}")
 
 
 @pcb_router.get("/indicator/{indicator_id}/schemes", summary="获取指标推荐方案")
@@ -596,6 +621,83 @@ def calculate_score(level: str) -> float:
         "不达标": 0.0,
     }
     return score_map.get(level, 0.0)
+
+
+# ==================== Enterprise Raw Material Usage APIs ====================
+
+@pcb_router.get("/enterprise/{enterprise_id}/raw-materials", summary="获取企业原辅材料使用情况")
+async def get_enterprise_raw_materials(
+    enterprise_id: int,
+    year: Optional[str] = Query(None, description="年份")
+):
+    """获取企业的原辅材料使用情况"""
+    usages = await enterprise_raw_material_controller.get_by_enterprise(enterprise_id, year)
+    
+    # 转换为前端需要的格式
+    usage_list = []
+    for usage in usages:
+        usage_dict = {
+            "id": usage.id,
+            "year": usage.year,
+            "name": usage.material.name if usage.material else "",
+            "unit": usage.unit or usage.material.unit if usage.material else "",
+            "process": usage.process or usage.material.process if usage.material else "",
+            "amount": float(usage.amount) if usage.amount else None,
+            "unitConsumption": None,  # 可以根据需要计算
+            "state": usage.state,
+            "voc": float(usage.voc_content) if usage.voc_content else None
+        }
+        usage_list.append(usage_dict)
+    
+    return Success(data=usage_list, msg="获取成功")
+
+
+@pcb_router.post("/enterprise/{enterprise_id}/raw-materials", summary="保存企业原辅材料使用情况")
+async def save_enterprise_raw_materials(
+    enterprise_id: int,
+    usage_data: dict
+):
+    """保存企业的原辅材料使用情况"""
+    year = usage_data.get("year", str(datetime.now().year))
+    materials_data = usage_data.get("materials", [])
+    
+    # 保存数据
+    usages = await enterprise_raw_material_controller.save_usage_data(
+        enterprise_id=enterprise_id,
+        year=year,
+        usage_data=materials_data
+    )
+    
+    return Success(data={"count": len(usages)}, msg="保存成功")
+
+
+@pcb_router.put("/enterprise/{enterprise_id}/raw-materials", summary="更新企业原辅材料使用情况")
+async def update_enterprise_raw_materials(
+    enterprise_id: int,
+    usage_data: dict
+):
+    """更新企业的原辅材料使用情况"""
+    year = usage_data.get("year", str(datetime.now().year))
+    materials_data = usage_data.get("materials", [])
+    
+    # 更新数据
+    usages = await enterprise_raw_material_controller.update_usage_data(
+        enterprise_id=enterprise_id,
+        year=year,
+        usage_data=materials_data
+    )
+    
+    return Success(data={"count": len(usages)}, msg="更新成功")
+
+
+@pcb_router.get("/enterprise/{enterprise_id}/raw-materials/statistics", summary="获取企业原辅材料使用统计")
+async def get_enterprise_raw_materials_statistics(
+    enterprise_id: int,
+    year: Optional[str] = Query(None, description="年份")
+):
+    """获取企业原辅材料使用统计信息"""
+    statistics = await enterprise_raw_material_controller.get_usage_statistics(enterprise_id, year)
+    return Success(data=statistics, msg="获取成功")
 
 
 

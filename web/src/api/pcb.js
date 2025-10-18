@@ -113,63 +113,63 @@ export const pcbEnterpriseSchemeApi = {
 export const pcbPlanningApi = {
   // 获取审核领导小组
   getLeadershipTeam: (enterpriseId) => 
-    request.get(`/api/v1/pcb/enterprise/${enterpriseId}/leadership-team`),
+    request.get(`/pcb/enterprise/${enterpriseId}/leadership-team`),
   
   // 添加审核领导小组成员
   addLeadershipMember: (enterpriseId, data) => 
-    request.post(`/api/v1/pcb/enterprise/${enterpriseId}/leadership-team`, data),
+    request.post(`/pcb/enterprise/${enterpriseId}/leadership-team`, data),
   
   // 更新审核领导小组成员
   updateLeadershipMember: (enterpriseId, memberId, data) => 
-    request.put(`/api/v1/pcb/enterprise/${enterpriseId}/leadership-team/${memberId}`, data),
+    request.put(`/pcb/enterprise/${enterpriseId}/leadership-team/${memberId}`, data),
   
   // 删除审核领导小组成员
   deleteLeadershipMember: (enterpriseId, memberId) => 
-    request.delete(`/api/v1/pcb/enterprise/${enterpriseId}/leadership-team/${memberId}`),
+    request.delete(`/pcb/enterprise/${enterpriseId}/leadership-team/${memberId}`),
   
   // 获取清洁生产工作小组
   getWorkTeam: (enterpriseId) => 
-    request.get(`/api/v1/pcb/enterprise/${enterpriseId}/work-team`),
+    request.get(`/pcb/enterprise/${enterpriseId}/work-team`),
   
   // 添加清洁生产工作小组成员
   addWorkTeamMember: (enterpriseId, data) => 
-    request.post(`/api/v1/pcb/enterprise/${enterpriseId}/work-team`, data),
+    request.post(`/pcb/enterprise/${enterpriseId}/work-team`, data),
   
   // 更新清洁生产工作小组成员
   updateWorkTeamMember: (enterpriseId, memberId, data) => 
-    request.put(`/api/v1/pcb/enterprise/${enterpriseId}/work-team/${memberId}`, data),
+    request.put(`/pcb/enterprise/${enterpriseId}/work-team/${memberId}`, data),
   
   // 删除清洁生产工作小组成员
   deleteWorkTeamMember: (enterpriseId, memberId) => 
-    request.delete(`/api/v1/pcb/enterprise/${enterpriseId}/work-team/${memberId}`),
+    request.delete(`/pcb/enterprise/${enterpriseId}/work-team/${memberId}`),
   
   // 获取工作计划表
   getWorkPlans: (enterpriseId) => 
-    request.get(`/api/v1/pcb/enterprise/${enterpriseId}/work-plans`),
+    request.get(`/pcb/enterprise/${enterpriseId}/work-plans`),
   
   // 创建工作计划
   createWorkPlan: (enterpriseId, data) => 
-    request.post(`/api/v1/pcb/enterprise/${enterpriseId}/work-plans`, data),
+    request.post(`/pcb/enterprise/${enterpriseId}/work-plans`, data),
   
   // 更新工作计划表
   updateWorkPlans: (enterpriseId, data) => 
-    request.put(`/api/v1/pcb/enterprise/${enterpriseId}/work-plans`, data),
+    request.put(`/pcb/enterprise/${enterpriseId}/work-plans`, data),
   
   // 获取培训记录
   getTrainingRecords: (enterpriseId) => 
-    request.get(`/api/v1/pcb/enterprise/${enterpriseId}/training-records`),
+    request.get(`/pcb/enterprise/${enterpriseId}/training-records`),
   
   // 添加培训记录
   addTrainingRecord: (enterpriseId, data) => 
-    request.post(`/api/v1/pcb/enterprise/${enterpriseId}/training-records`, data),
+    request.post(`/pcb/enterprise/${enterpriseId}/training-records`, data),
   
   // 更新培训记录
   updateTrainingRecord: (enterpriseId, recordId, data) => 
-    request.put(`/api/v1/pcb/enterprise/${enterpriseId}/training-records/${recordId}`, data),
+    request.put(`/pcb/enterprise/${enterpriseId}/training-records/${recordId}`, data),
   
   // 删除培训记录
   deleteTrainingRecord: (enterpriseId, recordId) => 
-    request.delete(`/api/v1/pcb/enterprise/${enterpriseId}/training-records/${recordId}`)
+    request.delete(`/pcb/enterprise/${enterpriseId}/training-records/${recordId}`)
 }
 
 // PCB审核报告API
@@ -186,6 +186,66 @@ export const pcbReportApi = {
     request.post(`/pcb/enterprise/${enterpriseId}/report/submit`)
 }
 
+// PCB企业生产情况数据API
+export const pcbProductionApi = {
+  // 获取企业生产情况数据
+  getData: (enterpriseId) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/production-data`),
+  
+  // 保存企业生产情况数据
+  saveData: (enterpriseId, data) => 
+    request.post(`/pcb/enterprise/${enterpriseId}/production-data`, data),
+  
+  // 更新企业生产情况数据
+  updateData: (enterpriseId, data) => 
+    request.put(`/pcb/enterprise/${enterpriseId}/production-data`, data),
+  
+  // 删除企业生产情况数据
+  deleteData: (enterpriseId) => 
+    request.delete(`/pcb/enterprise/${enterpriseId}/production-data`)
+}
+
+// 原辅材料API
+export const rawMaterialApi = {
+  // 获取原辅材料列表
+  getMaterials: (params = {}) => request.get('/raw-material/materials', { params }),
+  
+  // 创建原辅材料
+  create: (data) => request.post('/raw-material/materials', data),
+  
+  // 获取原辅材料详情
+  getDetail: (id) => request.get(`/raw-material/materials/${id}`),
+  
+  // 更新原辅材料
+  update: (id, data) => request.put(`/raw-material/materials/${id}`, data),
+  
+  // 删除原辅材料
+  delete: (id) => request.delete(`/raw-material/materials/${id}`)
+}
+
+// 企业原辅材料使用情况API
+export const enterpriseRawMaterialApi = {
+  // 获取企业原辅材料使用情况
+  getUsage: (enterpriseId, year) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/raw-materials`, { 
+      params: year ? { year } : {} 
+    }),
+  
+  // 保存企业原辅材料使用情况
+  saveUsage: (enterpriseId, data) => 
+    request.post(`/pcb/enterprise/${enterpriseId}/raw-materials`, data),
+  
+  // 更新企业原辅材料使用情况
+  updateUsage: (enterpriseId, data) => 
+    request.put(`/pcb/enterprise/${enterpriseId}/raw-materials`, data),
+  
+  // 获取企业原辅材料使用统计
+  getStatistics: (enterpriseId, year) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/raw-materials/statistics`, { 
+      params: year ? { year } : {} 
+    })
+}
+
 // 统一的PCB API对象
 export const pcbApi = {
   enterprise: pcbEnterpriseApi,
@@ -195,7 +255,10 @@ export const pcbApi = {
   planning: pcbPlanningApi,
   scheme: pcbSchemeApi,
   enterpriseScheme: pcbEnterpriseSchemeApi,
-  report: pcbReportApi
+  report: pcbReportApi,
+  production: pcbProductionApi,
+  rawMaterial: rawMaterialApi,
+  enterpriseRawMaterial: enterpriseRawMaterialApi
 }
 
 export default pcbApi

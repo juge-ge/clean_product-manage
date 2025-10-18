@@ -1,199 +1,142 @@
 <template>
   <div class="production-info-form">
-    <!-- 产能部分 -->
-    <n-card class="sub-module">
-      <n-h3 class="cursor-pointer hover:text-primary" @click="handleTitleClick">产能</n-h3>
-      <n-tabs type="line">
-        <n-tab-pane 
-          v-for="year in years" 
-          :key="year" 
-          :name="year" 
-          :tab="`${year}年产能`"
-        >
-          <n-grid :cols="2" :x-gap="24">
-            <n-form-item-gi 
-              v-for="type in baseProductionTypes" 
-              :key="type.key"
-              :label="`${type.label}（${type.unit}）`"
-            >
-              <n-input-number 
-                v-model:value="formData.capacity[year][type.key]"
-                placeholder="请输入产能"
-                :min="0"
-                :precision="2"
-              />
-            </n-form-item-gi>
-          </n-grid>
-
-          <!-- 多层板产能 -->
-          <div v-for="item in multilayerCapacityList" :key="item.id" class="mt-4">
-            <n-grid :cols="2" :x-gap="24">
-              <n-form-item-gi :label="`${item.label}（平方米/年）`">
-                <n-input-number 
-                  v-model:value="formData.capacity[year][item.key]"
-                  placeholder="请输入产能"
-                  :min="0"
-                  :precision="2"
-                />
-              </n-form-item-gi>
-            </n-grid>
+    <!-- 1. 近三年产品产量 -->
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">近三年产品产量</h3>
+        <n-button type="primary" @click="addProductOutputRow">
+          <template #icon>
+            <TheIcon icon="carbon:add" />
+          </template>
+          添加产品产量记录
+        </n-button>
+      </div>
+      <n-data-table
+        :columns="productOutputColumns"
+        :data="productOutputData"
+        :pagination="false"
+        :bordered="true"
+        class="data-table"
+      >
+        <template #empty>
+          <div class="empty-state">
+            <span>暂无数据，请点击上方按钮添加记录</span>
+          </div>
+        </template>
+      </n-data-table>
           </div>
 
-          <!-- 添加多层板按钮 -->
-          <div class="action-bar">
-            <n-button type="primary" @click="showAddMultilayerModal('capacity')">
+    <!-- 2. 企业近三年合格率 -->
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">企业近三年合格率</h3>
+        <n-button type="primary" @click="addQualificationRateRow">
               <template #icon>
                 <TheIcon icon="carbon:add" />
               </template>
-              添加多层板
+          添加合格率记录
             </n-button>
           </div>
-        </n-tab-pane>
-      </n-tabs>
-    </n-card>
-    
-    <!-- 产量部分 -->
-    <n-card class="mt-4 sub-module">
-      <n-h3 class="cursor-pointer hover:text-primary" @click="handleTitleClick">产量</n-h3>
-      <n-tabs type="line">
-        <n-tab-pane 
-          v-for="year in years" 
-          :key="year" 
-          :name="year" 
-          :tab="`${year}年产量`"
-        >
-          <n-grid :cols="2" :x-gap="24">
-            <n-form-item-gi 
-              v-for="type in baseProductionTypes" 
-              :key="type.key"
-              :label="`${type.label}（${type.unit}）`"
-            >
-              <n-input-number 
-                v-model:value="formData.output[year][type.key]"
-                placeholder="请输入产量"
-                :min="0"
-                :precision="2"
-              />
-            </n-form-item-gi>
-          </n-grid>
-
-          <!-- 多层板产量 -->
-          <div v-for="item in multilayerOutputList" :key="item.id" class="mt-4">
-            <n-grid :cols="2" :x-gap="24">
-              <n-form-item-gi :label="`${item.label}（平方米/年）`">
-                <n-input-number 
-                  v-model:value="formData.output[year][item.key]"
-                  placeholder="请输入产量"
-                  :min="0"
-                  :precision="2"
-                />
-              </n-form-item-gi>
-            </n-grid>
+      <n-data-table
+        :columns="qualificationRateColumns"
+        :data="qualificationRateData"
+        :pagination="false"
+        :bordered="true"
+        class="data-table"
+      >
+        <template #empty>
+          <div class="empty-state">
+            <span>暂无数据，请点击上方按钮添加记录</span>
+          </div>
+        </template>
+      </n-data-table>
           </div>
 
-          <!-- 添加多层板按钮 -->
-          <div class="action-bar mt-4">
-            <n-button type="primary" @click="showAddMultilayerModal('output')">
+    <!-- 3. 企业近三年产值情况 -->
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">企业近三年产值情况</h3>
+        <n-button type="primary" @click="addOutputValueRow">
               <template #icon>
                 <TheIcon icon="carbon:add" />
               </template>
-              添加多层板
+          添加产值记录
             </n-button>
+      </div>
+      <n-data-table
+        :columns="outputValueColumns"
+        :data="outputValueData"
+        :pagination="false"
+        :bordered="true"
+        class="data-table"
+      >
+        <template #empty>
+          <div class="empty-state">
+            <span>暂无数据，请点击上方按钮添加记录</span>
           </div>
-        </n-tab-pane>
-      </n-tabs>
-    </n-card>
-
-    <!-- 添加多层板弹窗 -->
-    <n-modal v-model:show="showModal" preset="dialog" title="添加多层板">
-      <n-form ref="formRef" :model="modalForm" :rules="modalRules">
-        <n-form-item label="板类型" path="type">
-          <n-select
-            v-model:value="modalForm.type"
-            :options="multilayerTypes"
-            placeholder="请选择板类型"
-          />
-        </n-form-item>
-        <n-form-item label="层数" path="layers">
-          <n-select
-            v-model:value="modalForm.layers"
-            :options="layerOptions"
-            placeholder="请选择层数"
-          />
-        </n-form-item>
-      </n-form>
-      <template #action>
-        <n-button type="primary" @click="handleAddMultilayer">确认</n-button>
       </template>
-    </n-modal>
+      </n-data-table>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, h } from 'vue'
 import { 
-  NFormItem, NInputNumber, NTabs, NTabPane, NGrid, NFormItemGi, NCard,
-  NButton, NModal, NForm, NSelect, NH3, NIcon
+  NDataTable, NButton, NSelect, NInput, NInputNumber, NSpace
 } from 'naive-ui'
-import { renderIcon } from '@/utils'
 import TheIcon from '@/components/icon/TheIcon.vue'
 
 const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({
-      capacity: {
-        '2022': {},
-        '2023': {},
-        '2024': {}
-      },
-      output: {
-        '2022': {},
-        '2023': {},
-        '2024': {}
-      }
+      productOutput: [],
+      qualificationRate: [],
+      outputValue: []
     })
   }
 })
 
 const emit = defineEmits(['update:modelValue'])
 
-// 常量定义
-const years = ['2022', '2023', '2024']
-const baseProductionTypes = [
-  { key: 'rigidSingle', label: '刚性单面板', unit: '平方米/年' },
-  { key: 'rigidDouble', label: '刚性双面板', unit: '平方米/年' },
-  { key: 'flexibleSingle', label: '挠性单面板', unit: '平方米/年' },
-  { key: 'flexibleDouble', label: '挠性双面板', unit: '平方米/年' }
+// 枚举选项
+const typeOptions = [
+  { label: '刚性', value: 'rigid' },
+  { label: '挠性', value: 'flexible' }
 ]
 
-const multilayerTypes = [
-  { key: 'rigidMultilayer', label: '刚性多层板' },
-  { key: 'rigidHDI', label: '刚性HDI板' },
-  { key: 'flexibleMultilayer', label: '挠性多层板' },
-  { key: 'flexibleHDI', label: '挠性HDI板' }
+const rigidProductOptions = [
+  { label: '刚性单面板', value: 'rigid_single', defaultLayers: 1 },
+  { label: '刚性双面板', value: 'rigid_double', defaultLayers: 2 },
+  { label: '刚性多面板', value: 'rigid_multilayer', defaultLayers: null },
+  { label: '刚性HDI板', value: 'rigid_hdi', defaultLayers: null }
+]
+
+const flexibleProductOptions = [
+  { label: '挠性单面板', value: 'flexible_single', defaultLayers: 1 },
+  { label: '挠性双面板', value: 'flexible_double', defaultLayers: 2 },
+  { label: '挠性多面板', value: 'flexible_multilayer', defaultLayers: null },
+  { label: '挠性HDI板', value: 'flexible_hdi', defaultLayers: null }
+]
+
+const unitOptions = [
+  { label: 'm²', value: 'm2' }
+]
+
+const yearOptions = Array.from({ length: 10 }, (_, i) => {
+  const year = new Date().getFullYear() - 5 + i
+  return { label: year.toString(), value: year.toString() }
+})
+
+const outputValueUnitOptions = [
+  { label: '万元', value: 'wan_yuan' }
 ]
 
 const layerOptions = Array.from({ length: 30 }, (_, i) => ({
-  label: `${i + 3}层`,
-  value: i + 3
+  label: `${i + 1}层`,
+  value: i + 1
 }))
-
-const modalRules = {
-  type: { required: true, message: '请选择板类型' },
-  layers: { required: true, message: '请选择层数' }
-}
-
-// 响应式状态
-const showModal = ref(false)
-const currentMode = ref('') // 'capacity' or 'output'
-const modalForm = ref({
-  type: null,
-  layers: null
-})
-const formRef = ref(null)
-const multilayerCapacityList = ref([])
-const multilayerOutputList = ref([])
 
 // 计算属性
 const formData = computed({
@@ -201,88 +144,368 @@ const formData = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-// 方法定义
-const handleTitleClick = (title) => {
-  window.$message.info(`点击了${title}`)
-}
+// 数据
+const productOutputData = computed({
+  get: () => formData.value.productOutput || [],
+  set: (value) => {
+    formData.value.productOutput = value
+  }
+})
 
-const showAddMultilayerModal = (mode) => {
-  currentMode.value = mode
-  modalForm.value = {
+const qualificationRateData = computed({
+  get: () => formData.value.qualificationRate || [],
+  set: (value) => {
+    formData.value.qualificationRate = value
+  }
+})
+
+const outputValueData = computed({
+  get: () => formData.value.outputValue || [],
+  set: (value) => {
+    formData.value.outputValue = value
+  }
+})
+
+// 表格列定义
+const productOutputColumns = [
+  {
+    title: '类型',
+    key: 'type',
+    width: 100,
+    render: (row, index) => {
+      return h(NSelect, {
+        value: row.type,
+        'onUpdate:value': (value) => {
+          productOutputData.value[index].type = value
+          // 重置主要产品选项
+          productOutputData.value[index].mainProduct = null
+          productOutputData.value[index].layers = null
+        },
+        options: typeOptions,
+        placeholder: '请选择类型'
+      })
+    }
+  },
+  {
+    title: '主要产品',
+    key: 'mainProduct',
+    width: 150,
+    render: (row, index) => {
+      const options = row.type === 'rigid' ? rigidProductOptions : flexibleProductOptions
+      return h(NSelect, {
+        value: row.mainProduct,
+        'onUpdate:value': (value) => {
+          productOutputData.value[index].mainProduct = value
+          // 设置默认层数
+          const selectedProduct = options.find(opt => opt.value === value)
+          if (selectedProduct && selectedProduct.defaultLayers) {
+            productOutputData.value[index].layers = selectedProduct.defaultLayers
+          } else {
+            productOutputData.value[index].layers = null
+          }
+        },
+        options: options,
+        placeholder: '请选择产品',
+        disabled: !row.type
+      })
+    }
+  },
+  {
+    title: '单位',
+    key: 'unit',
+    width: 100,
+    render: (row, index) => {
+      return h(NSelect, {
+        value: row.unit,
+        'onUpdate:value': (value) => {
+          productOutputData.value[index].unit = value
+        },
+        options: unitOptions,
+        placeholder: '请选择单位'
+      })
+    }
+  },
+  {
+    title: '年份',
+    key: 'year',
+    width: 100,
+    render: (row, index) => {
+      return h(NSelect, {
+        value: row.year,
+        'onUpdate:value': (value) => {
+          productOutputData.value[index].year = value
+        },
+        options: yearOptions,
+        placeholder: '请选择年份'
+      })
+    }
+  },
+  {
+    title: '产量',
+    key: 'output',
+    width: 120,
+    render: (row, index) => {
+      return h(NInputNumber, {
+        value: row.output,
+        'onUpdate:value': (value) => {
+          productOutputData.value[index].output = value
+        },
+        placeholder: '请输入产量',
+        min: 0,
+        precision: 2
+      })
+    }
+  },
+  {
+    title: '层数',
+    key: 'layers',
+    width: 100,
+    render: (row, index) => {
+      const selectedProduct = row.type === 'rigid' 
+        ? rigidProductOptions.find(opt => opt.value === row.mainProduct)
+        : flexibleProductOptions.find(opt => opt.value === row.mainProduct)
+      
+      if (selectedProduct && selectedProduct.defaultLayers) {
+        return h('span', selectedProduct.defaultLayers + '层')
+      }
+      
+      return h(NSelect, {
+        value: row.layers,
+        'onUpdate:value': (value) => {
+          productOutputData.value[index].layers = value
+        },
+        options: layerOptions,
+        placeholder: '请选择层数',
+        disabled: !row.mainProduct || (selectedProduct && selectedProduct.defaultLayers)
+      })
+    }
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 100,
+    render: (row, index) => {
+      return h(NSpace, [
+        h(NButton, {
+          size: 'small',
+          type: 'error',
+          onClick: () => removeProductOutputRow(index)
+        }, { default: () => '删除' })
+      ])
+    }
+  }
+]
+
+const qualificationRateColumns = [
+  {
+    title: '年份',
+    key: 'year',
+    width: 120,
+    render: (row, index) => {
+      return h(NSelect, {
+        value: row.year,
+        'onUpdate:value': (value) => {
+          qualificationRateData.value[index].year = value
+        },
+        options: yearOptions,
+        placeholder: '请选择年份'
+      })
+    }
+  },
+  {
+    title: '合格率(%)',
+    key: 'rate',
+    width: 150,
+    render: (row, index) => {
+      return h(NInputNumber, {
+        value: row.rate,
+        'onUpdate:value': (value) => {
+          qualificationRateData.value[index].rate = value
+        },
+        placeholder: '请输入合格率',
+        min: 0,
+        max: 100,
+        precision: 2,
+        suffix: '%',
+        style: { width: '120px' }
+      })
+    }
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 100,
+    render: (row, index) => {
+      return h(NSpace, [
+        h(NButton, {
+          size: 'small',
+          type: 'error',
+          onClick: () => removeQualificationRateRow(index)
+        }, { default: () => '删除' })
+      ])
+    }
+  }
+]
+
+const outputValueColumns = [
+  {
+    title: '年份',
+    key: 'year',
+    width: 120,
+    render: (row, index) => {
+      return h(NSelect, {
+        value: row.year,
+        'onUpdate:value': (value) => {
+          outputValueData.value[index].year = value
+        },
+        options: yearOptions,
+        placeholder: '请选择年份'
+      })
+    }
+  },
+  {
+    title: '单位',
+    key: 'unit',
+    width: 100,
+    render: (row, index) => {
+      return h(NSelect, {
+        value: row.unit,
+        'onUpdate:value': (value) => {
+          outputValueData.value[index].unit = value
+        },
+        options: outputValueUnitOptions,
+        placeholder: '请选择单位'
+      })
+    }
+  },
+  {
+    title: '年产值',
+    key: 'annualOutputValue',
+    width: 150,
+    render: (row, index) => {
+      return h(NInputNumber, {
+        value: row.annualOutputValue,
+        'onUpdate:value': (value) => {
+          outputValueData.value[index].annualOutputValue = value
+        },
+        placeholder: '请输入年产值',
+        min: 0,
+        precision: 2
+      })
+    }
+  },
+  {
+    title: '所得税',
+    key: 'incomeTax',
+    width: 150,
+    render: (row, index) => {
+      return h(NInputNumber, {
+        value: row.incomeTax,
+        'onUpdate:value': (value) => {
+          outputValueData.value[index].incomeTax = value
+        },
+        placeholder: '请输入所得税',
+        min: 0,
+        precision: 2
+      })
+    }
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 100,
+    render: (row, index) => {
+      return h(NSpace, [
+        h(NButton, {
+          size: 'small',
+          type: 'error',
+          onClick: () => removeOutputValueRow(index)
+        }, { default: () => '删除' })
+      ])
+    }
+  }
+]
+
+// 方法
+const addProductOutputRow = () => {
+  productOutputData.value.push({
     type: null,
+    mainProduct: null,
+    unit: null,
+    year: null,
+    output: null,
     layers: null
-  }
-  showModal.value = true
+  })
 }
 
-const handleAddMultilayer = async () => {
-  try {
-    await formRef.value?.validate()
-    const { type, layers } = modalForm.value
-    const selectedType = multilayerTypes.find(t => t.key === type)
-    const newItem = {
-      id: Date.now(),
-      key: `${type}_${layers}`,
-      label: `${selectedType.label}(${layers}层)`
-    }
-    
-    if (currentMode.value === 'capacity') {
-      multilayerCapacityList.value.push(newItem)
-      years.forEach(year => {
-        if (!formData.value.capacity[year]) {
-          formData.value.capacity[year] = {}
-        }
-        formData.value.capacity[year][newItem.key] = null
-      })
-    } else {
-      multilayerOutputList.value.push(newItem)
-      years.forEach(year => {
-        if (!formData.value.output[year]) {
-          formData.value.output[year] = {}
-        }
-        formData.value.output[year][newItem.key] = null
-      })
-    }
-    
-    showModal.value = false
-    window.$message.success('添加成功')
-  } catch (err) {
-    // 表单验证失败
-  }
+const removeProductOutputRow = (index) => {
+  productOutputData.value.splice(index, 1)
+}
+
+const addQualificationRateRow = () => {
+  qualificationRateData.value.push({
+    year: null,
+    rate: null
+  })
+}
+
+const removeQualificationRateRow = (index) => {
+  qualificationRateData.value.splice(index, 1)
+}
+
+const addOutputValueRow = () => {
+  outputValueData.value.push({
+    year: null,
+    unit: 'wan_yuan',
+    annualOutputValue: null,
+    incomeTax: null
+  })
+}
+
+const removeOutputValueRow = (index) => {
+  outputValueData.value.splice(index, 1)
 }
 
 // 确保数据结构完整
 watch(() => props.modelValue, (newVal) => {
   if (newVal) {
-    // 确保产能数据结构完整
-    if (!newVal.capacity) {
-      newVal.capacity = {}
+    if (!newVal.productOutput) {
+      newVal.productOutput = []
     }
-    years.forEach(year => {
-      if (!newVal.capacity[year]) {
-        newVal.capacity[year] = {}
-      }
-      baseProductionTypes.forEach(type => {
-        if (!(type.key in newVal.capacity[year])) {
-          newVal.capacity[year][type.key] = null
-        }
-      })
-    })
-
-    // 确保产量数据结构完整
-    if (!newVal.output) {
-      newVal.output = {}
+    if (!newVal.qualificationRate) {
+      newVal.qualificationRate = []
     }
-    years.forEach(year => {
-      if (!newVal.output[year]) {
-        newVal.output[year] = {}
-      }
-      baseProductionTypes.forEach(type => {
-        if (!(type.key in newVal.output[year])) {
-          newVal.output[year][type.key] = null
-        }
+    if (!newVal.outputValue) {
+      newVal.outputValue = []
+    }
+    
+    // 如果表格为空，添加一条空白记录
+    if (newVal.productOutput.length === 0) {
+      newVal.productOutput.push({
+        type: null,
+        mainProduct: null,
+        unit: null,
+        year: null,
+        output: null,
+        layers: null
       })
-    })
+    }
+    
+    if (newVal.qualificationRate.length === 0) {
+      newVal.qualificationRate.push({
+        year: null,
+        rate: null
+      })
+    }
+    
+    if (newVal.outputValue.length === 0) {
+      newVal.outputValue.push({
+        year: null,
+        unit: 'wan_yuan',
+        annualOutputValue: null,
+        incomeTax: null
+      })
+    }
   }
 }, { immediate: true, deep: true })
 </script>
@@ -292,23 +515,48 @@ watch(() => props.modelValue, (newVal) => {
   padding: 16px 0;
 }
 
-.action-bar {
+.section {
+  margin-bottom: 32px;
+}
+
+.section-header {
   display: flex;
-  justify-content: center;
-  border-top: 1px solid var(--n-border-color);
-  padding-top: 16px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
-.sub-module {
-  border: 1px solid #e0e0e6;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #ff8c00;
 }
 
-.sub-module:hover {
-  border-color: #18a058;
-  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.15);
+.data-table {
+  margin-bottom: 16px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-state .n-button {
+  margin-top: 16px;
+}
+
+/* 表格标题加粗 */
+:deep(.n-data-table .n-data-table-th) {
+  font-weight: 600;
+}
+
+/* 表格标题文字加粗 */
+:deep(.n-data-table .n-data-table-th .n-data-table-th__content) {
+  font-weight: 600;
 }
 </style>
 

@@ -100,6 +100,10 @@ class PCBIndicatorController(CRUDBase[PCBIndicator, PCBIndicatorCreate, PCBIndic
         """根据指标编号获取指标"""
         return await self.model.get_or_none(indicator_id=indicator_id)
 
+    async def get_all(self) -> List[PCBIndicator]:
+        """获取所有指标"""
+        return await self.model.all().order_by("indicator_id")
+
     async def get_indicators_by_category(self, category: str) -> List[PCBIndicator]:
         """根据类别获取指标列表"""
         return await self.model.filter(category=category).order_by("order", "indicator_id")
@@ -472,6 +476,26 @@ class PCBEnterpriseSchemeController(
             )
             recommendations.append(rec)
         return recommendations
+
+    async def save_selected_schemes(
+        self, enterprise_id: int, selected_schemes: List[Dict]
+    ) -> List[PCBEnterpriseScheme]:
+        """保存企业选定的方案"""
+        # 先删除旧的选定方案
+        await self.model.filter(enterprise_id=enterprise_id, status="selected").delete()
+        
+        # 保存新的选定方案
+        selected_list = []
+        for scheme_data in selected_schemes:
+            scheme = await self.model.create(
+                enterprise_id=enterprise_id,
+                scheme_id=scheme_data["scheme_id"],
+                indicator_id=scheme_data.get("indicator_id"),
+                status="selected"
+            )
+            selected_list.append(scheme)
+        
+        return selected_list
 
 
 class PCBAuditReportController(CRUDBase[PCBAuditReport, Dict, Dict]):

@@ -281,11 +281,11 @@ const indicatorTreeOptions = ref([
 const schemeColumns = [
   {
     title: '方案序号',
-    key: 'id',
+    key: 'scheme_id',
     width: 80,
     align: 'center',
     render: (row) => {
-      return h('span', { style: { fontWeight: 'bold', color: '#1890ff', fontSize: '14px' } }, `方案${row.id}`)
+      return h('span', { style: { fontWeight: 'bold', color: '#1890ff', fontSize: '14px' } }, `方案${row.scheme_id}`)
     }
   },
   {
@@ -299,11 +299,11 @@ const schemeColumns = [
   },
   {
     title: '解决问题',
-    key: 'problemSolved',
+    key: 'problem',
     width: 120,
     ellipsis: { tooltip: true },
     render: (row) => {
-      return h('span', { style: { fontSize: '14px' } }, row.problemSolved)
+      return h('span', { style: { fontSize: '14px' } }, row.problem)
     }
   },
   {
@@ -317,88 +317,47 @@ const schemeColumns = [
   },
   {
     title: '经济效益',
-    key: 'economicBenefit',
+    key: 'economic_benefit',
     width: 140,
     ellipsis: { tooltip: true },
     render: (row) => {
-      return h('span', { style: { fontSize: '14px' } }, row.economicBenefit)
+      return h('span', { style: { fontSize: '14px' } }, row.economic_benefit)
     }
   },
   {
     title: '环境效益',
-    key: 'environmentalBenefit',
+    key: 'environmental_benefit',
     width: 140,
     ellipsis: { tooltip: true },
     render: (row) => {
-      return h('span', { style: { fontSize: '14px' } }, row.environmentalBenefit)
+      return h('span', { style: { fontSize: '14px' } }, row.environmental_benefit)
     }
   },
   {
-    title: '主要应对指标编号',
-    key: 'indicatorIds',
-    width: 200,
+    title: '方案类型',
+    key: 'scheme_type',
+    width: 120,
+    ellipsis: { tooltip: true },
     render: (row) => {
-      if (!row.indicatorIds || row.indicatorIds.length === 0) {
-        return '暂无指标'
-      }
-      
-      // 显示前3个指标编号，超过3个显示省略号
-      const displayIds = row.indicatorIds.slice(0, 3)
-      const hasMore = row.indicatorIds.length > 3
-      
-      return h('div', {
-        style: 'display: flex; align-items: center; gap: 4px;'
-      }, [
-        h('span', {
-          style: 'white-space: nowrap; font-size: 12px;'
-        }, displayIds.join(', ')),
-        hasMore && h('span', {
-          style: 'color: #999; font-size: 12px;'
-        }, '...'),
-        h(NTooltip, {
-          trigger: 'hover',
-          placement: 'top'
-        }, {
-          trigger: () => h('span', {
-            style: 'cursor: help; color: #1890ff; font-size: 12px; margin-left: 4px;'
-          }, '?'),
-          default: () => `完整指标编号：${row.indicatorIds.join(', ')}`
-        })
-      ])
+      return h('span', { style: { fontSize: '14px' } }, row.scheme_type || '未分类')
     }
   },
   {
-    title: '主要对应指标名称',
-    key: 'indicatorNames',
-    width: 250,
+    title: '投资估算(万元)',
+    key: 'investment',
+    width: 120,
+    align: 'right',
     render: (row) => {
-      if (!row.indicatorNames || row.indicatorNames.length === 0) {
-        return '暂无指标'
-      }
-      
-      // 显示前2个指标名称，超过2个显示省略号
-      const displayNames = row.indicatorNames.slice(0, 2)
-      const hasMore = row.indicatorNames.length > 2
-      
-      return h('div', {
-        style: 'display: flex; align-items: center; gap: 4px;'
-      }, [
-        h('span', {
-          style: 'white-space: nowrap; font-size: 12px;'
-        }, displayNames.join(', ')),
-        hasMore && h('span', {
-          style: 'color: #999; font-size: 12px;'
-        }, '...'),
-        h(NTooltip, {
-          trigger: 'hover',
-          placement: 'top'
-        }, {
-          trigger: () => h('span', {
-            style: 'cursor: help; color: #1890ff; font-size: 12px; margin-left: 4px;'
-          }, '?'),
-          default: () => `完整指标名称：${row.indicatorNames.join(', ')}`
-        })
-      ])
+      return h('span', { style: { fontSize: '14px' } }, row.investment ? `${row.investment}` : '-')
+    }
+  },
+  {
+    title: '回收期(年)',
+    key: 'payback_period',
+    width: 100,
+    align: 'right',
+    render: (row) => {
+      return h('span', { style: { fontSize: '14px' } }, row.payback_period ? `${row.payback_period}` : '-')
     }
   },
   {
@@ -423,7 +382,7 @@ const schemeColumns = [
         h('n-button', {
           size: 'small',
           type: 'error',
-          onClick: () => deleteScheme(row.id)
+          onClick: () => deleteScheme(row.scheme_id)
         }, {
           default: () => [
             h(TheIcon, { icon: 'carbon:trash-can', size: 14 }),
@@ -466,7 +425,7 @@ const handleSaveScheme = async () => {
   try {
     const formData = await schemeFormRef.value.validate()
     if (isEdit.value) {
-      await api.pcb.scheme.update(currentScheme.value.id, formData)
+      await api.pcb.scheme.update(currentScheme.value.scheme_id, formData)
       window.$message.success('方案更新成功')
     } else {
       await api.pcb.scheme.create(formData)
@@ -474,6 +433,10 @@ const handleSaveScheme = async () => {
     }
     showAddModal.value = false
     resetForm()
+    // 刷新表格
+    if (schemeTableRef.value) {
+      schemeTableRef.value.handleSearch()
+    }
     emit('update', formData)
   } catch (error) {
     console.error('保存方案失败:', error)
@@ -495,8 +458,12 @@ const deleteScheme = async (schemeId) => {
       title: '确认删除',
       content: '确定要删除该方案吗？此操作不可恢复。'
     })
-    await mockDetailApi.deleteScheme(props.enterpriseId, schemeId)
+    await api.pcb.scheme.delete(schemeId)
     window.$message.success('删除成功')
+    // 刷新表格
+    if (schemeTableRef.value) {
+      schemeTableRef.value.handleSearch()
+    }
   } catch (error) {
     if (error) {
       console.error('删除失败:', error)

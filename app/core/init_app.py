@@ -192,10 +192,10 @@ async def init_db():
     await command.init()
     try:
         await command.migrate()
-    except AttributeError:
-        logger.warning("unable to retrieve model history from database, model history will be created from scratch")
-        shutil.rmtree("migrations")
-        await command.init_db(safe=True)
+    except Exception as e:
+        logger.warning(f"Migration failed: {e}, skipping migration step")
+        # 跳过迁移，因为我们已经直接创建了表
+        pass
 
     await command.upgrade(run_in_transaction=True)
 

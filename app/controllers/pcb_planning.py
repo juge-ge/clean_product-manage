@@ -41,6 +41,10 @@ class PCBLeadershipTeamController(CRUDBase[PCBLeadershipTeam, PCBLeadershipTeamC
         member_dict["enterprise_id"] = enterprise_id
         return await self.model.create(**member_dict)
 
+    async def remove(self, id: int) -> None:
+        """删除成员（覆盖基类，提供更明确的接口）"""
+        await super().remove(id=id)
+
 
 class PCBWorkTeamController(CRUDBase[PCBWorkTeam, PCBWorkTeamCreate, PCBWorkTeamUpdate]):
     """PCB工作小组控制器"""
@@ -57,6 +61,10 @@ class PCBWorkTeamController(CRUDBase[PCBWorkTeam, PCBWorkTeamCreate, PCBWorkTeam
         member_dict = member_data.dict()
         member_dict["enterprise_id"] = enterprise_id
         return await self.model.create(**member_dict)
+
+    async def remove(self, id: int) -> None:
+        """删除成员（覆盖基类，提供更明确的接口）"""
+        await super().remove(id=id)
 
 
 class PCBWorkPlanController(CRUDBase[PCBWorkPlan, PCBWorkPlanCreate, PCBWorkPlanUpdate]):
@@ -109,6 +117,10 @@ class PCBWorkPlanController(CRUDBase[PCBWorkPlan, PCBWorkPlanCreate, PCBWorkPlan
             await plan.save()
         return plans
 
+    async def remove(self, id: int) -> None:
+        """删除计划（覆盖基类）"""
+        await super().remove(id=id)
+
 
 class PCBTrainingRecordController(CRUDBase[PCBTrainingRecord, PCBTrainingRecordCreate, PCBTrainingRecordUpdate]):
     """PCB培训记录控制器"""
@@ -119,6 +131,10 @@ class PCBTrainingRecordController(CRUDBase[PCBTrainingRecord, PCBTrainingRecordC
     async def get_by_enterprise(self, enterprise_id: int) -> List[PCBTrainingRecord]:
         """获取企业的培训记录"""
         return await self.model.filter(enterprise_id=enterprise_id).order_by("-date")
+
+    async def remove(self, id: int) -> None:
+        """删除培训记录（覆盖基类）"""
+        await super().remove(id=id)
 
     async def create_record(self, enterprise_id: int, record_data: PCBTrainingRecordCreate) -> PCBTrainingRecord:
         """创建培训记录"""

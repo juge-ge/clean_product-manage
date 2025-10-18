@@ -68,7 +68,7 @@
               <span class="header-title">工作计划表</span>
             </div>
             <div class="header-actions">
-              <n-button type="primary" @click="showWorkPlanModal = true">
+              <n-button type="primary" @click="openWorkPlanEdit">
                 <template #icon>
                   <TheIcon icon="carbon:edit" />
                 </template>
@@ -125,23 +125,6 @@
               <span class="header-title">宣传与培训</span>
             </div>
             <div class="header-actions">
-              <!-- 会议图片上传 -->
-              <n-upload
-                :file-list="meetingImages"
-                @change="handleMeetingImageChange"
-                @remove="handleMeetingImageRemove"
-                :max="5"
-                accept="image/*"
-                class="meeting-image-upload"
-              >
-                <n-button size="small" type="info">
-                  <template #icon>
-                    <TheIcon icon="carbon:camera" />
-                  </template>
-                  上传会议图片
-                </n-button>
-              </n-upload>
-              
               <n-button type="primary" @click="showAddTrainingModal = true">
                 <template #icon>
                   <TheIcon icon="carbon:add" />
@@ -183,6 +166,23 @@
             
             <div class="training-actions">
               <n-space>
+                <!-- 为每个培训记录添加独立的图片上传 -->
+                <n-upload
+                  :file-list="record.images || []"
+                  @change="(options) => handleTrainingImageChange(record.id, options)"
+                  @remove="(options) => handleTrainingImageRemove(record.id, options)"
+                  :max="5"
+                  accept="image/*"
+                  class="training-image-upload"
+                >
+                  <n-button size="small" type="info">
+                    <template #icon>
+                      <TheIcon icon="carbon:camera" />
+                    </template>
+                    上传图片
+                  </n-button>
+                </n-upload>
+                
                 <n-button size="small" @click="editTraining(record)">编辑</n-button>
                 <n-button size="small" type="error" @click="deleteTraining(record.id)">删除</n-button>
               </n-space>
@@ -330,11 +330,11 @@
       </div>
     </n-modal>
 
-    <!-- 添加培训记录模态框 -->
+    <!-- 添加/编辑培训记录模态框 -->
     <n-modal
       v-model:show="showAddTrainingModal"
       preset="card"
-      title="添加培训记录"
+      :title="editingTrainingId ? '编辑培训记录' : '添加培训记录'"
       size="large"
       :bordered="false"
     >
@@ -452,6 +452,7 @@ const showWorkPlanModal = ref(false)
 const trainingRecords = ref([])
 const trainingLoading = ref(false)
 const showAddTrainingModal = ref(false)
+const editingTrainingId = ref(null)
 const trainingForm = ref({
   title: '',
   date: null,
@@ -461,7 +462,7 @@ const trainingForm = ref({
   instructor: '',
   location: ''
 })
-const meetingImages = ref([])
+// 移除全局的meetingImages，改为每个培训记录独立的图片管理
 
 // 渲染函数定义
 const renderRoleTag = (row) => {
@@ -522,8 +523,14 @@ const renderWorkContent = (row, index) => {
 }
 
 const renderPlannedStartDate = (row, index) => {
+  // 处理日期格式，确保DatePicker能正确显示
+  let dateValue = row.planned_start_date
+  if (dateValue && typeof dateValue === 'string') {
+    dateValue = new Date(dateValue)
+  }
+  
   return h(NDatePicker, {
-    value: row.planned_start_date,
+    value: dateValue,
     'onUpdate:value': (value) => {
       workPlanStages.value[index].planned_start_date = value
     },
@@ -533,8 +540,14 @@ const renderPlannedStartDate = (row, index) => {
 }
 
 const renderPlannedEndDate = (row, index) => {
+  // 处理日期格式，确保DatePicker能正确显示
+  let dateValue = row.planned_end_date
+  if (dateValue && typeof dateValue === 'string') {
+    dateValue = new Date(dateValue)
+  }
+  
   return h(NDatePicker, {
-    value: row.planned_end_date,
+    value: dateValue,
     'onUpdate:value': (value) => {
       workPlanStages.value[index].planned_end_date = value
     },
@@ -554,8 +567,14 @@ const renderResponsibleDepartment = (row, index) => {
 }
 
 const renderActualStartDate = (row, index) => {
+  // 处理日期格式，确保DatePicker能正确显示
+  let dateValue = row.actual_start_date
+  if (dateValue && typeof dateValue === 'string') {
+    dateValue = new Date(dateValue)
+  }
+  
   return h(NDatePicker, {
-    value: row.actual_start_date,
+    value: dateValue,
     'onUpdate:value': (value) => {
       workPlanStages.value[index].actual_start_date = value
     },
@@ -565,8 +584,14 @@ const renderActualStartDate = (row, index) => {
 }
 
 const renderActualEndDate = (row, index) => {
+  // 处理日期格式，确保DatePicker能正确显示
+  let dateValue = row.actual_end_date
+  if (dateValue && typeof dateValue === 'string') {
+    dateValue = new Date(dateValue)
+  }
+  
   return h(NDatePicker, {
-    value: row.actual_end_date,
+    value: dateValue,
     'onUpdate:value': (value) => {
       workPlanStages.value[index].actual_end_date = value
     },
@@ -685,7 +710,22 @@ const fetchLeadershipTeam = async () => {
   try {
     leadershipLoading.value = true
     const response = await api.pcb.planning.getLeadershipTeam(enterpriseId.value)
-    leadershipTeam.value = response.data.items || []
+    const items = response.data.items || []
+    
+    // 按角色和姓名排序
+    leadershipTeam.value = items.sort((a, b) => {
+      // 首先按角色排序：组长 > 副组长 > 成员
+      const roleOrder = { '组长': 1, '副组长': 2, '成员': 3 }
+      const roleA = roleOrder[a.role] || 4
+      const roleB = roleOrder[b.role] || 4
+      
+      if (roleA !== roleB) {
+        return roleA - roleB
+      }
+      
+      // 角色相同时按姓名排序
+      return a.name.localeCompare(b.name, 'zh-CN')
+    })
   } catch (error) {
     console.error('获取领导小组失败:', error)
     message.error('获取领导小组失败')
@@ -698,7 +738,22 @@ const fetchWorkTeam = async () => {
   try {
     workTeamLoading.value = true
     const response = await api.pcb.planning.getWorkTeam(enterpriseId.value)
-    workTeam.value = response.data.items || []
+    const items = response.data.items || []
+    
+    // 按角色和姓名排序
+    workTeam.value = items.sort((a, b) => {
+      // 首先按角色排序：组长 > 副组长 > 成员
+      const roleOrder = { '组长': 1, '副组长': 2, '成员': 3 }
+      const roleA = roleOrder[a.role] || 4
+      const roleB = roleOrder[b.role] || 4
+      
+      if (roleA !== roleB) {
+        return roleA - roleB
+      }
+      
+      // 角色相同时按姓名排序
+      return a.name.localeCompare(b.name, 'zh-CN')
+    })
   } catch (error) {
     console.error('获取工作小组失败:', error)
     message.error('获取工作小组失败')
@@ -763,7 +818,21 @@ const saveWorkTeamMember = async () => {
 
 const saveWorkPlans = async () => {
   try {
-    await api.pcb.planning.updateWorkPlans(enterpriseId.value, workPlanStages.value)
+    // 处理日期格式，确保后端能正确接收
+    const processedPlans = workPlanStages.value.map(plan => {
+      const processedPlan = { ...plan }
+      // 将日期转换为ISO字符串格式
+      const dateFields = ['planned_start_date', 'planned_end_date', 'actual_start_date', 'actual_end_date']
+      dateFields.forEach(field => {
+        if (processedPlan[field] && typeof processedPlan[field] === 'number') {
+          processedPlan[field] = new Date(processedPlan[field]).toISOString()
+        }
+      })
+      return processedPlan
+    })
+    
+    // 后端要求的请求体：{ work_plans: [...] }
+    await api.pcb.planning.updateWorkPlans(enterpriseId.value, { work_plans: processedPlans })
     message.success('保存成功')
     showWorkPlanModal.value = false
     await fetchWorkPlans()
@@ -775,30 +844,67 @@ const saveWorkPlans = async () => {
 
 const saveTraining = async () => {
   try {
-    const formData = new FormData()
-    Object.keys(trainingForm.value).forEach(key => {
-      if (trainingForm.value[key] !== null && trainingForm.value[key] !== '') {
-        formData.append(key, trainingForm.value[key])
+    if (editingTrainingId.value) {
+      // 编辑模式
+      await api.pcb.planning.updateTrainingRecord(enterpriseId.value, editingTrainingId.value, trainingForm.value)
+      message.success('更新成功')
+    } else {
+      // 添加模式
+      const formData = new FormData()
+      Object.keys(trainingForm.value).forEach(key => {
+        if (trainingForm.value[key] !== null && trainingForm.value[key] !== '') {
+          let value = trainingForm.value[key]
+          // 处理日期格式
+          if (key === 'date' && value) {
+            // 将日期转换为ISO字符串格式
+            if (typeof value === 'number') {
+              value = new Date(value).toISOString()
+            } else if (value instanceof Date) {
+              value = value.toISOString()
+            }
+          }
+          formData.append(key, value)
+        }
+      })
+      
+      // 确保date字段存在
+      if (!formData.has('date') && trainingForm.value.date) {
+        let dateValue = trainingForm.value.date
+        if (typeof dateValue === 'number') {
+          dateValue = new Date(dateValue).toISOString()
+        } else if (dateValue instanceof Date) {
+          dateValue = dateValue.toISOString()
+        }
+        formData.append('date', dateValue)
       }
-    })
+      
+      // 调试：检查FormData内容
+      console.log('FormData contents:')
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value)
+      }
+      
+      await api.pcb.planning.addTrainingRecord(enterpriseId.value, formData)
+      message.success('添加成功')
+    }
     
-    // 添加图片文件
-    meetingImages.value.forEach((file, index) => {
-      formData.append(`images[${index}]`, file)
-    })
-    
-    await api.pcb.planning.addTrainingRecord(enterpriseId.value, formData)
-    message.success('添加成功')
     showAddTrainingModal.value = false
+    editingTrainingId.value = null
     resetTrainingForm()
     await fetchTrainingRecords()
   } catch (error) {
-    console.error('添加培训记录失败:', error)
-    message.error('添加失败')
+    console.error('保存培训记录失败:', error)
+    message.error('保存失败')
   }
 }
 
 // 工作计划表编辑功能
+const openWorkPlanEdit = () => {
+  // 确保workPlanStages是最新的数据
+  workPlanStages.value = [...workPlans.value]
+  showWorkPlanModal.value = true
+}
+
 const addWorkPlanStage = () => {
   const newStage = {
     id: null,
@@ -846,15 +952,21 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')
 }
 
-// 图片上传处理
-const handleMeetingImageChange = (options) => {
+// 图片上传处理 - 为每个培训记录独立处理
+const handleTrainingImageChange = (recordId, options) => {
   const { fileList } = options
-  meetingImages.value = fileList.map(file => file.file)
+  const record = trainingRecords.value.find(r => r.id === recordId)
+  if (record) {
+    record.images = fileList.map(file => file.file)
+  }
 }
 
-const handleMeetingImageRemove = (options) => {
+const handleTrainingImageRemove = (recordId, options) => {
   const { fileList } = options
-  meetingImages.value = fileList.map(file => file.file)
+  const record = trainingRecords.value.find(r => r.id === recordId)
+  if (record) {
+    record.images = fileList.map(file => file.file)
+  }
 }
 
 // 表单重置
@@ -890,11 +1002,21 @@ const resetTrainingForm = () => {
     instructor: '',
     location: ''
   }
+  editingTrainingId.value = null
 }
 
 // 培训记录操作
 const editTraining = (record) => {
-  trainingForm.value = { ...record }
+  editingTrainingId.value = record.id
+  // 处理日期格式，确保DatePicker能正确显示
+  const formData = { ...record }
+  if (formData.date) {
+    // 如果日期是字符串，转换为Date对象
+    if (typeof formData.date === 'string') {
+      formData.date = new Date(formData.date)
+    }
+  }
+  trainingForm.value = formData
   showAddTrainingModal.value = true
 }
 
@@ -991,7 +1113,7 @@ onMounted(async () => {
 }
 
 .header-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #333;
 }

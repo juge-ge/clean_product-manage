@@ -579,11 +579,19 @@ const handleIndicatorUpdate = async (indicatorId, level, reason = null) => {
         })
       }
       
-      // 更新改进措施
-      if (level !== 'I级') {
-        indicator.recommendedSchemes = await getRecommendedSchemes(indicatorId)
+      // 更新推荐方案
+      if (level && level !== 'I级') {
+        try {
+          const schemes = await getRecommendedSchemes(indicatorId)
+          indicator.recommendedSchemes = schemes
+          console.log(`指标 ${indicatorId} 更新后的推荐方案:`, schemes)
+        } catch (error) {
+          console.error(`获取指标 ${indicatorId} 的推荐方案失败:`, error)
+          indicator.recommendedSchemes = []
+        }
       } else {
         indicator.recommendedSchemes = []
+        indicator.selectedSchemes = []
       }
       
       // 重新计算汇总数据
@@ -644,16 +652,61 @@ const handleResetAudit = () => {
 const handleSubmitAudit = async () => {
   try {
     loading.value = true
+    
+    // 1. 收集所有指标的审核结果
+    const indicators = []
+    const selectedSchemes = []
+    
+    auditTreeData.value.forEach(category => {
+      if (category.children) {
+        category.children.forEach(indicator => {
+          // 收集指标审核结果
+          indicators.push({
+            indicator_id: indicator.id,
+            current_value: indicator.currentValue,
+            level: indicator.level,
+            score: indicator.score,
+            remark: indicator.remark || ''
+          })
+          
+          // 收集选定的方案
+          if (indicator.selectedSchemes && indicator.selectedSchemes.length > 0) {
+            indicator.selectedSchemes.forEach(schemeId => {
+              selectedSchemes.push({
+                indicator_id: indicator.id,
+                scheme_id: schemeId
+              })
+            })
+          }
+        })
+      }
+    })
+    
+    // 2. 构建提交数据
     const auditData = {
-      enterpriseId: props.enterpriseId,
-      indicators: auditTreeData.value,
-      summary: summary.value,
-      auditDate: new Date().toISOString()
+      indicators,
+      selected_schemes: selectedSchemes,
+      auditor_name: '当前用户', // 从用户信息获取
+      audit_date: new Date().toISOString().split('T')[0]
     }
     
-    // 模拟提交
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.log('提交审核数据:', auditData)
+    
+    // 3. 提交到后端
+    const response = await api.pcb.audit.batchUpdate(props.enterpriseId, auditData)
+    
     window.$message.success('审核结果提交成功')
+    
+    // 4. 更新汇总信息
+    if (response.data) {
+      summary.value = {
+        totalScore: response.data.total_score || 0,
+        overallLevel: response.data.overall_level || '未评估',
+        improvementItems: response.data.improvement_items || 0,
+        limitingIndicators: response.data.limiting_indicators || 0
+      }
+    }
+    
   } catch (error) {
     console.error('提交审核结果失败:', error)
     window.$message.error('提交审核结果失败')
@@ -701,8 +754,8 @@ const getRecommendedSchemes = async (indicatorId) => {
   try {
     console.log(`正在为指标ID ${indicatorId} 获取推荐方案...`)
     
-    // 直接获取推荐方案
-    const response = await mockDetailApi.getRecommendedSchemes(
+    // 使用真实的API获取推荐方案
+    const response = await api.pcb.scheme.getByEnterpriseIndicator(
       props.enterpriseId, 
       indicatorId
     )
@@ -710,7 +763,20 @@ const getRecommendedSchemes = async (indicatorId) => {
     const schemes = response.data || []
     console.log(`指标ID ${indicatorId} 的推荐方案:`, schemes)
     
-    return schemes
+    // 转换数据格式以适配前端组件
+    return schemes.map(scheme => ({
+      value: scheme.id,
+      label: scheme.name,
+      preview: {
+        type: scheme.scheme_type,
+        problemSolved: scheme.problem,
+        description: scheme.description,
+        economicBenefit: scheme.economic_benefit,
+        environmentalBenefit: scheme.environmental_benefit,
+        investment: scheme.investment,
+        paybackPeriod: scheme.payback_period
+      }
+    }))
   } catch (error) {
     console.error('获取推荐方案失败:', error)
     return []
@@ -797,24 +863,44 @@ const getProgressColor = (score) => {
 const fetchAuditData = async () => {
   try {
     loading.value = true
-    const response = await api.pcb.audit.getResults(props.enterpriseId)
-    const data = response.data || []
     
-    // 为每个指标加载推荐方案
-    for (const indicator of data) {
-      if (!indicator.isCategory && indicator.indicator) {
+    // 1. 获取所有指标定义
+    const indicatorsResponse = await api.pcb.indicator.getList()
+    const allIndicators = indicatorsResponse.data || []
+    
+    // 2. 获取企业的审核结果
+    const resultsResponse = await api.pcb.audit.getResults(props.enterpriseId)
+    const auditResults = resultsResponse.data || []
+    
+    // 3. 合并指标定义和审核结果
+    const mergedData = allIndicators.map(indicator => {
+      const result = auditResults.find(r => r.indicator_id === indicator.id)
+      return {
+        ...indicator,
+        currentValue: result?.current_value || null,
+        level: result?.level || null,
+        score: result?.score || 0,
+        remark: result?.remark || '',
+        recommendedSchemes: [],
+        selectedSchemes: []
+      }
+    })
+    
+    // 4. 为每个指标加载推荐方案
+    for (const indicator of mergedData) {
+      if (indicator.level && indicator.level !== 'I级') {
         try {
-          const schemesResponse = await api.pcb.scheme.getByEnterpriseIndicator(props.enterpriseId, indicator.indicator.id)
-          indicator.recommendedSchemes = schemesResponse.data || []
+          const schemes = await getRecommendedSchemes(indicator.id)
+          indicator.recommendedSchemes = schemes
         } catch (error) {
-          console.error(`获取指标${indicator.indicator.id}的推荐方案失败:`, error)
+          console.error(`获取指标${indicator.id}的推荐方案失败:`, error)
           indicator.recommendedSchemes = []
         }
       }
     }
     
-    // 构建树形结构
-    auditTreeData.value = buildTreeData(data)
+    // 5. 构建树形结构
+    auditTreeData.value = buildTreeData(mergedData)
     calculateSummary()
   } catch (error) {
     console.error('获取审核数据失败:', error)
@@ -859,7 +945,12 @@ const buildTreeData = (data) => {
       recommendedSchemes: item.recommendedSchemes || [],
       selectedSchemes: item.selectedSchemes || [],
       isCategory: false,
-      key: `indicator-${item.id}`
+      key: `indicator-${item.id}`,
+      // 确保字段名匹配
+      category: item.category,
+      name: item.name,
+      type: item.indicator_type || item.type,
+      isLimiting: item.is_limiting || item.isLimiting || false
     }
     
     if (!categoryMap.has(item.category)) {
