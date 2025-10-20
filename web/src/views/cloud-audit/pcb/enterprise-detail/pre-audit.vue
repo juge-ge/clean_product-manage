@@ -37,7 +37,7 @@
               </n-button>
             </div>
           </template>
-          <RawMaterialForm v-model="formData.rawMaterials" />
+          <RawMaterialForm v-model="formData.rawMaterials" :enterprise-id="enterpriseId" />
         </n-card>
 
         <!-- 3. 主要工艺及装备使用 -->
@@ -75,7 +75,7 @@
               </n-button>
             </div>
           </template>
-          <ResourceConsumptionForm v-model="formData.resourceConsumption" />
+          <ResourceConsumptionForm ref="resourceConsumptionFormRef" v-model="formData.resourceConsumption" :enterprise-id="enterpriseId" />
         </n-card>
 
         <!-- 5. 污染防治 -->
@@ -195,6 +195,7 @@ const emit = defineEmits(['update', 'navigate'])
 // 数据状态
 const loading = ref(false)
 const formRef = ref(null)
+const resourceConsumptionFormRef = ref(null)
 
 // 表单数据 - 按技术方案设计的数据结构
 const formData = ref({
@@ -208,16 +209,7 @@ const formData = ref({
   rawMaterials: [],
   // 主要工艺及装备使用
   processEquipment: {
-    rigid: {
-      single: { line: '', process: '', equipment: '' },
-      double: { line: '', process: '', equipment: '' },
-      multilayer: { line: '', process: '', equipment: '' }
-    },
-    flexible: {
-      single: { line: '', process: '', equipment: '' },
-      double: { line: '', process: '', equipment: '' },
-      multilayer: { line: '', process: '', equipment: '' }
-    }
+    equipment: []
   },
   // 资源能源消耗
   resourceConsumption: {
@@ -227,22 +219,20 @@ const formData = ref({
   },
   // 污染防治
   pollutionControl: {
-    copperRecovery: [],
-    waterReuseRate: [],
-    gasEmission: [],
-    waterEmission: []
+    wastewater: [],
+    wasteGas: []
   },
   // 工业固体废物管理
   solidWaste: {
-    general: [],
-    hazardous: []
+    waste: []
   },
   // 自行监测情况
   selfMonitoring: {
-    organizedGas: { item: '', concentration: null, point: '', standard: '', reportFileId: '' },
-    unorganizedGas: { item: '', concentration: null, point: '', standard: '', reportFileId: '' },
-    wastewater: { item: '', concentration: null, point: '', standard: '', reportFileId: '' },
-    noise: { item: '', level: null, point: '', standard: '', reportFileId: '' }
+    organizedGas: [],
+    unorganizedGas: [],
+    wastewater: [],
+    gasEmission: [],
+    noise: []
   }
 })
 
@@ -317,6 +307,19 @@ const saveModuleData = async (moduleName) => {
     // 根据模块名称保存对应的数据
     if (moduleName === 'productionInfo') {
       await api.pcb.production.saveData(props.enterpriseId, formData.value.productionInfo)
+    } else if (moduleName === 'resourceConsumption') {
+      // 调用资源能源消耗组件的保存方法
+      if (resourceConsumptionFormRef.value && resourceConsumptionFormRef.value.saveData) {
+        await resourceConsumptionFormRef.value.saveData()
+      }
+    } else if (moduleName === 'processEquipment') {
+      await api.pcb.processEquipment.saveAllData(props.enterpriseId, formData.value.processEquipment)
+    } else if (moduleName === 'pollutionControl') {
+      await api.pcb.pollutionControl.saveAllData(props.enterpriseId, formData.value.pollutionControl)
+    } else if (moduleName === 'solidWaste') {
+      await api.pcb.solidWaste.saveAllData(props.enterpriseId, formData.value.solidWaste)
+    } else if (moduleName === 'selfMonitoring') {
+      await api.pcb.selfMonitoring.saveAllData(props.enterpriseId, formData.value.selfMonitoring)
     } else {
       // 保存其他模块数据
       const moduleData = { [moduleName]: formData.value[moduleName] }

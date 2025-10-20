@@ -1,49 +1,51 @@
-#!/usr/bin/env python3
-"""
-检查数据库数据
-"""
-import sqlite3
+import asyncio
+from tortoise import Tortoise
+from app.models.pcb import PCBEnterprise
+from app.models.pcb_planning import PCBLeadershipTeam, PCBWorkTeam, PCBWorkPlan, PCBTrainingRecord
+from app.models.pcb import PCBPreAuditData
 
-def check_data():
-    conn = sqlite3.connect('db.sqlite3')
-    cursor = conn.cursor()
+async def check_data():
+    await Tortoise.init(
+        db_url='sqlite://db.sqlite3',
+        modules={'models': ['app.models']}
+    )
     
-    # 检查企业表
-    print("企业表数据:")
-    cursor.execute("SELECT id, name FROM pcb_enterprise LIMIT 5")
-    enterprises = cursor.fetchall()
-    for enterprise in enterprises:
-        print(f"  ID: {enterprise[0]}, 名称: {enterprise[1]}")
+    # 检查企业数据
+    enterprises = await PCBEnterprise.all()
+    print('=== 企业数据 ===')
+    for ent in enterprises:
+        print(f'ID: {ent.id}, 名称: {ent.name}, 状态: {ent.audit_status}')
     
-    # 检查领导小组表
-    print("\n领导小组表数据:")
-    cursor.execute("SELECT id, enterprise_id, name, role FROM pcb_leadership_team")
-    members = cursor.fetchall()
-    for member in members:
-        print(f"  ID: {member[0]}, 企业ID: {member[1]}, 姓名: {member[2]}, 角色: {member[3]}")
+    # 检查筹划与组织数据
+    if enterprises:
+        enterprise_id = enterprises[0].id
+        print(f'\n=== 筹划与组织数据 (企业ID: {enterprise_id}) ===')
+        
+        # 领导小组
+        leadership = await PCBLeadershipTeam.filter(enterprise_id=enterprise_id)
+        print(f'领导小组成员数: {len(leadership)}')
+        
+        # 工作小组
+        work_team = await PCBWorkTeam.filter(enterprise_id=enterprise_id)
+        print(f'工作小组成员数: {len(work_team)}')
+        
+        # 工作计划
+        work_plans = await PCBWorkPlan.filter(enterprise_id=enterprise_id)
+        print(f'工作计划数: {len(work_plans)}')
+        
+        # 培训记录
+        training = await PCBTrainingRecord.filter(enterprise_id=enterprise_id)
+        print(f'培训记录数: {len(training)}')
+        
+        # 预审核数据
+        pre_audit = await PCBPreAuditData.filter(enterprise_id=enterprise_id)
+        print(f'预审核数据数: {len(pre_audit)}')
+        if pre_audit:
+            print(f'预审核数据状态: {pre_audit[0].status}')
+    else:
+        print('没有找到企业数据')
     
-    # 检查工作小组表
-    print("\n工作小组表数据:")
-    cursor.execute("SELECT id, enterprise_id, name, role FROM pcb_work_team")
-    members = cursor.fetchall()
-    for member in members:
-        print(f"  ID: {member[0]}, 企业ID: {member[1]}, 姓名: {member[2]}, 角色: {member[3]}")
-    
-    # 检查工作计划表
-    print("\n工作计划表数据:")
-    cursor.execute("SELECT id, enterprise_id, stage_order, stage FROM pcb_work_plans")
-    plans = cursor.fetchall()
-    for plan in plans:
-        print(f"  ID: {plan[0]}, 企业ID: {plan[1]}, 阶段: {plan[2]}, 名称: {plan[3]}")
-    
-    # 检查培训记录表
-    print("\n培训记录表数据:")
-    cursor.execute("SELECT id, enterprise_id, title FROM pcb_training_records")
-    records = cursor.fetchall()
-    for record in records:
-        print(f"  ID: {record[0]}, 企业ID: {record[1]}, 标题: {record[2]}")
-    
-    conn.close()
+    await Tortoise.close_connections()
 
 if __name__ == "__main__":
-    check_data()
+    asyncio.run(check_data())

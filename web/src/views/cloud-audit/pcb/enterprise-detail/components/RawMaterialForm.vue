@@ -1,7 +1,7 @@
 <template>
   <div class="raw-material-form">
     <!-- 主表格区域 -->
-    <div class="table-container">
+    <div class="table-container sub-module">
       <div class="table-header">
         <h3 class="table-title">原辅材料使用情况</h3>
         <div class="table-actions">
@@ -143,7 +143,7 @@ const props = defineProps({
     default: () => []
   },
   enterpriseId: {
-    type: Number,
+    type: [String, Number],
     required: true
   }
 })
@@ -547,6 +547,9 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
+  padding-bottom: 8px;
+  display: inline-block;
+  border-bottom: 2px solid #ff8c00;
 }
 
 .table-actions {
@@ -580,6 +583,9 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 600;
   color: #2c3e50;
+  padding-bottom: 8px;
+  display: inline-block;
+  border-bottom: 2px solid #ff8c00;
 }
 
 .year-selector {
@@ -675,5 +681,29 @@ onMounted(async () => {
 
 :deep(.n-input-number) {
   border-radius: 6px;
+}
+
+/* 表格模块样式 */
+.sub-module {
+  border: 1px solid #e0e0e6;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sub-module:hover {
+  border-color: #18a058;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.15);
+}
+
+/* 表标题样式 */
+.table-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  padding-bottom: 8px;
+  display: inline-block;
+  border-bottom: 2px solid #ff8c00;
 }
 </style>

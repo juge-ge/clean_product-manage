@@ -1,55 +1,51 @@
+#!/usr/bin/env python3
+"""
+直接测试API
+"""
+
 import requests
 import json
 
-# 测试API是否可以直接访问
-def test_api():
-    base_url = "http://localhost:9999"
+def test_api_direct():
+    """直接测试API"""
+    BASE_URL = "http://localhost:9999/api/v1"
+    HEADERS = {"token": "dev"}
     
-    # 先尝试登录获取token
-    login_data = {
-        "username": "admin",
-        "password": "123456"
-    }
-    
+    # 测试生产数据API
+    print("测试生产数据API:")
     try:
-        # 登录
-        login_response = requests.post(f"{base_url}/api/v1/base/access_token", json=login_data)
-        print(f"登录响应状态: {login_response.status_code}")
+        response = requests.get(f"{BASE_URL}/pcb/enterprise/7/production-data", headers=HEADERS)
+        print(f"状态码: {response.status_code}")
+        print(f"响应头: {dict(response.headers)}")
+        print(f"响应内容: {response.text}")
         
-        if login_response.status_code == 200:
-            token_data = login_response.json()
-            token = token_data.get('data', {}).get('access_token')
-            print(f"获取到token: {token[:20]}..." if token else "未获取到token")
-            
-            if token:
-                # 测试PCB筹划与组织API
-                headers = {
-                    "token": token,
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json"
-                }
-                
-                # 测试领导小组API
-                leadership_response = requests.get(
-                    f"{base_url}/api/v1/pcb/enterprise/7/leadership-team",
-                    headers=headers
-                )
-                print(f"领导小组API响应状态: {leadership_response.status_code}")
-                print(f"领导小组API响应内容: {leadership_response.text[:200]}...")
-                
-                # 测试工作小组API
-                work_team_response = requests.get(
-                    f"{base_url}/api/v1/pcb/enterprise/7/work-team",
-                    headers=headers
-                )
-                print(f"工作小组API响应状态: {work_team_response.status_code}")
-                print(f"工作小组API响应内容: {work_team_response.text[:200]}...")
-                
-        else:
-            print(f"登录失败: {login_response.text}")
-            
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                print(f"JSON数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
+            except:
+                print("不是JSON格式")
     except Exception as e:
-        print(f"测试失败: {e}")
+        print(f"请求异常: {e}")
+    
+    print("\n" + "="*50 + "\n")
+    
+    # 测试资源能源消耗API
+    print("测试资源能源消耗API:")
+    try:
+        response = requests.get(f"{BASE_URL}/resource-consumption/enterprise/7/all-data", headers=HEADERS)
+        print(f"状态码: {response.status_code}")
+        print(f"响应头: {dict(response.headers)}")
+        print(f"响应内容: {response.text}")
+        
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                print(f"JSON数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
+            except:
+                print("不是JSON格式")
+    except Exception as e:
+        print(f"请求异常: {e}")
 
 if __name__ == "__main__":
-    test_api()
+    test_api_direct()

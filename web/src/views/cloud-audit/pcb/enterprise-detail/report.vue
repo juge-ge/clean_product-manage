@@ -183,8 +183,14 @@ const previewReport = () => {
 // 导出报告
 const exportReport = async (format) => {
   try {
-    await mockDetailApi.exportReport(props.enterpriseId, format)
-    window.$message.success(`报告导出成功（${format.toUpperCase()}格式）`)
+    if (format === 'word') {
+      // 调用Word导出API
+      const url = `/api/v1/pcb/enterprise/${props.enterpriseId}/report/export`
+      window.open(url, '_blank')
+      window.$message.success('Word报告导出成功')
+    } else if (format === 'pdf') {
+      window.$message.info('PDF导出功能开发中')
+    }
   } catch (error) {
     console.error('导出报告失败:', error)
     window.$message.error('导出报告失败')

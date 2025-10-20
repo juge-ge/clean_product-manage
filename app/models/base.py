@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 
 from tortoise import fields, models
@@ -20,6 +20,8 @@ class BaseModel(models.Model):
                 value = getattr(self, field)
                 if isinstance(value, datetime):
                     value = value.strftime(settings.DATETIME_FORMAT)
+                elif isinstance(value, date):
+                    value = value.strftime('%Y-%m-%d')
                 elif isinstance(value, Decimal):
                     value = float(value) if value is not None else None
                 d[field] = value
@@ -46,6 +48,8 @@ class BaseModel(models.Model):
                 if k not in exclude_fields:
                     if isinstance(v, datetime):
                         formatted_value[k] = v.strftime(settings.DATETIME_FORMAT)
+                    elif isinstance(v, date):
+                        formatted_value[k] = v.strftime('%Y-%m-%d')
                     elif isinstance(v, Decimal):
                         formatted_value[k] = float(v) if v is not None else None
                     else:

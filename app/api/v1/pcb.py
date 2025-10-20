@@ -18,7 +18,7 @@ from app.controllers.pcb import (
     pcb_scheme_controller,
 )
 from app.controllers.enterprise_raw_material import enterprise_raw_material_controller
-from app.models.pcb import PCBIndicator, PCBScheme
+from app.models.pcb import PCBIndicator, PCBScheme, PCBIndicatorSchemeRelation
 from app.schemas.base import Success
 from app.schemas.pcb import (
     PCBAuditReportResponse,
@@ -275,11 +275,8 @@ async def get_audit_results(enterprise_id: int):
         result_dict["indicator"] = indicator_dict
 
         # 获取推荐方案
-        if result and result.level and result.level not in ["I级", "待评估"]:
-            recommended_schemes = await pcb_scheme_controller.get_schemes_by_indicator(indicator.id)
-            result_dict["recommended_schemes"] = recommended_schemes
-        else:
-            result_dict["recommended_schemes"] = []
+        recommended_schemes = await pcb_audit_result_controller.get_indicator_recommended_schemes(enterprise_id, indicator.id)
+        result_dict["recommended_schemes"] = recommended_schemes
 
         data.append(result_dict)
 
@@ -311,6 +308,7 @@ async def update_indicator_audit(
         score=score,
         manual_override=update_data.manual_override or False,
         override_reason=update_data.override_reason,
+        selected_scheme_ids=update_data.selected_scheme_ids,
     )
 
     return Success(data=await result.to_dict(), msg="审核结果更新成功")
@@ -400,7 +398,24 @@ async def get_scheme_list(
 
     data = []
     for scheme in schemes:
-        data.append(await scheme.to_dict())
+        scheme_dict = await scheme.to_dict()
+        
+        # 获取关联的指标信息
+        relations = await PCBIndicatorSchemeRelation.filter(scheme_id=scheme.id).all()
+        related_indicators = []
+        for relation in relations:
+            indicator = await PCBIndicator.get_or_none(id=relation.indicator_id)
+            if indicator:
+                related_indicators.append({
+                    "id": indicator.id,
+                    "name": indicator.name,
+                    "relevance_score": float(relation.relevance_score),
+                    "priority": relation.priority,
+                    "recommendation_reason": relation.recommendation_reason
+                })
+        
+        scheme_dict["related_indicators"] = related_indicators
+        data.append(scheme_dict)
 
     return Success(
         data={
@@ -487,15 +502,9 @@ async def get_enterprise_indicator_schemes(enterprise_id: int, indicator_id: int
     if not indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
 
-    # 获取审核结果
-    result = await pcb_audit_result_controller.get_or_create_result(enterprise_id, indicator_id)
-
-    # 只有非I级才推荐方案
-    if result.level and result.level not in ["I级", "待评估"]:
-        schemes = await pcb_scheme_controller.get_schemes_by_indicator(indicator_id)
-        return Success(data=schemes)
-    else:
-        return Success(data=[])
+    # 获取推荐方案
+    schemes = await pcb_audit_result_controller.get_indicator_recommended_schemes(enterprise_id, indicator_id)
+    return Success(data=schemes)
 
 
 # ==================== Indicator-Scheme Relation APIs ====================
@@ -507,6 +516,8 @@ async def create_indicator_scheme_relation(relation: PCBIndicatorSchemeRelationC
         indicator_id=relation.indicator_id,
         scheme_id=relation.scheme_id,
         relevance_score=relation.relevance_score,
+        priority=relation.priority,
+        recommendation_reason=relation.recommendation_reason,
     )
     return Success(data=await new_relation.to_dict(), msg="关联创建成功")
 
@@ -608,6 +619,50 @@ async def submit_audit_report(enterprise_id: int):
         raise HTTPException(status_code=404, detail="审核报告不存在")
 
     return Success(data=await report.to_dict(), msg="审核报告提交成功")
+
+
+@pcb_router.get("/enterprise/{enterprise_id}/report/export", summary="导出审核报告Word文档")
+async def export_audit_report_word(enterprise_id: int):
+    """导出审核报告为Word文档"""
+    from fastapi.responses import FileResponse
+    import os
+    
+    try:
+        # 暂时直接从reports文件夹中查找现有报告
+        # 注释掉原来的报告生成逻辑
+        
+        # 查找reports目录中的报告文件
+        reports_dir = os.path.abspath("reports")
+        if not os.path.exists(reports_dir):
+            raise HTTPException(status_code=404, detail=f"reports目录不存在: {reports_dir}")
+        
+        # 查找匹配的报告文件
+        report_files = [f for f in os.listdir(reports_dir) if f.endswith('.docx')]
+        
+        if not report_files:
+            raise HTTPException(status_code=404, detail="未找到报告文件")
+        
+        # 使用第一个找到的报告文件
+        report_filename = report_files[0]
+        filepath = os.path.join(reports_dir, report_filename)
+        
+        if not os.path.exists(filepath):
+            raise HTTPException(status_code=404, detail="报告文件不存在")
+        
+        # 返回文件
+        return FileResponse(
+            filepath,
+            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            filename=report_filename
+        )
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"导出报告失败: {str(e)}"
+        )
 
 
 # ==================== Helper Functions ====================

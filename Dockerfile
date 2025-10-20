@@ -1,10 +1,25 @@
+# --- Frontend Build Stage ---
 FROM node:18.12.0-alpine3.16 AS web
 
-WORKDIR /opt/vue-fastapi-admin
-COPY /web ./web
-RUN cd /opt/vue-fastapi-admin/web && npm i --registry=https://registry.npmmirror.com && npm run build
+WORKDIR /opt/vue-fastapi-admin/web
 
+# 1. 在 Node 环境中全局安装 pnpm
+#    这是使用 pnpm 的标准步骤
+RUN npm install -g pnpm
 
+# 2. 只复制 package.json 和 pnpm-lock.yaml 文件
+#    注意这里的文件名是 pnpm-lock.yaml
+COPY web/package.json web/pnpm-lock.yaml ./
+
+# 3. 使用 pnpm install 命令安装依赖
+#    --frozen-lockfile 参数等同于 npm ci，确保严格按照锁文件安装
+RUN pnpm install --frozen-lockfile --registry=https://registry.npmmirror.com
+
+# 4. 在依赖安装完成后，再复制所有的源代码
+COPY web/ ./
+
+# 5. 使用 pnpm 运行构建命令
+RUN pnpm run build
 FROM python:3.11-slim-bullseye
 
 WORKDIR /opt/vue-fastapi-admin

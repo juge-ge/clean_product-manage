@@ -131,6 +131,7 @@ class PCBAuditResultUpdate(BaseModel):
     comment: Optional[str] = Field(None, description="审核意见")
     manual_override: Optional[bool] = Field(None, description="是否手动调整")
     override_reason: Optional[str] = Field(None, description="调整原因")
+    selected_scheme_ids: Optional[List[int]] = Field(None, description="选择的方案ID列表")
 
 
 class PCBAuditResultResponse(PCBAuditResultBase):
@@ -138,6 +139,8 @@ class PCBAuditResultResponse(PCBAuditResultBase):
     id: int
     manual_override: bool = Field(default=False, description="是否手动调整")
     override_reason: Optional[str] = Field(None, description="调整原因")
+    selected_scheme_ids: Optional[List[int]] = Field(None, description="选择的方案ID列表")
+    scheme_selection_date: Optional[str] = Field(None, description="方案选择时间")
     auditor_id: Optional[int] = Field(None, description="审核人ID")
     audit_date: Optional[str] = Field(None, description="审核时间")
     created_at: str
@@ -244,6 +247,8 @@ class PCBIndicatorSchemeRelationBase(BaseModel):
     indicator_id: int = Field(..., description="指标ID")
     scheme_id: int = Field(..., description="方案ID")
     relevance_score: Decimal = Field(default=Decimal("1.0"), description="关联度")
+    priority: int = Field(default=1, description="优先级(1-10)")
+    recommendation_reason: Optional[str] = Field(None, description="推荐理由")
 
 
 class PCBIndicatorSchemeRelationCreate(PCBIndicatorSchemeRelationBase):

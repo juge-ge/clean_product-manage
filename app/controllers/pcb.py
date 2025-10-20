@@ -166,6 +166,7 @@ class PCBAuditResultController(CRUDBase[PCBAuditResult, PCBAuditResultCreate, PC
         manual_override: bool = False,
         override_reason: Optional[str] = None,
         auditor_id: Optional[int] = None,
+        selected_scheme_ids: Optional[List[int]] = None,
     ) -> PCBAuditResult:
         """更新指标评级"""
         result = await self.get_or_create_result(enterprise_id, indicator_id)
@@ -175,6 +176,9 @@ class PCBAuditResultController(CRUDBase[PCBAuditResult, PCBAuditResultCreate, PC
             result.score = score
         result.manual_override = manual_override
         result.override_reason = override_reason
+        if selected_scheme_ids is not None:
+            result.selected_scheme_ids = selected_scheme_ids
+            result.scheme_selection_date = datetime.now()
         if auditor_id:
             result.auditor_id = auditor_id
         result.audit_date = datetime.now()
@@ -204,6 +208,36 @@ class PCBAuditResultController(CRUDBase[PCBAuditResult, PCBAuditResultCreate, PC
             updated_results.append(result)
 
         return updated_results
+
+    async def get_indicator_recommended_schemes(self, enterprise_id: int, indicator_id: int) -> List[Dict]:
+        """获取指标推荐方案"""
+        # 获取指标方案关联
+        relation_controller = PCBIndicatorSchemeRelationController()
+        relations = await relation_controller.get_schemes_by_indicator(indicator_id)
+        
+        # 获取方案详情
+        schemes = []
+        for relation in relations:
+            scheme = await PCBScheme.get_or_none(id=relation.scheme_id)
+            if scheme:
+                schemes.append({
+                    "id": scheme.id,
+                    "scheme_id": scheme.scheme_id,
+                    "name": scheme.name,
+                    "type": scheme.scheme_type,
+                    "description": scheme.description,
+                    "implementation": scheme.implementation,
+                    "expected_effect": scheme.environmental_benefit,
+                    "investment": float(scheme.investment) if scheme.investment else 0,
+                    "payback_period": float(scheme.payback_period) if scheme.payback_period else 0,
+                    "relevance_score": float(relation.relevance_score),
+                    "priority": relation.priority,
+                    "recommendation_reason": relation.recommendation_reason
+                })
+        
+        # 按优先级和关联度排序
+        schemes.sort(key=lambda x: (x["priority"], -x["relevance_score"]))
+        return schemes
 
     async def calculate_summary(self, enterprise_id: int) -> Dict:
         """计算审核汇总数据"""
@@ -365,18 +399,22 @@ class PCBIndicatorSchemeRelationController(
         super().__init__(model=PCBIndicatorSchemeRelation)
 
     async def create_relation(
-        self, indicator_id: int, scheme_id: int, relevance_score: Decimal = Decimal("1.0")
+        self, indicator_id: int, scheme_id: int, relevance_score: Decimal = Decimal("1.0"),
+        priority: int = 1, recommendation_reason: str = None
     ) -> PCBIndicatorSchemeRelation:
         """创建指标方案关联"""
         # 检查是否已存在
         existing = await self.model.get_or_none(indicator_id=indicator_id, scheme_id=scheme_id)
         if existing:
             existing.relevance_score = relevance_score
+            existing.priority = priority
+            existing.recommendation_reason = recommendation_reason
             await existing.save()
             return existing
 
         return await self.model.create(
-            indicator_id=indicator_id, scheme_id=scheme_id, relevance_score=relevance_score
+            indicator_id=indicator_id, scheme_id=scheme_id, relevance_score=relevance_score,
+            priority=priority, recommendation_reason=recommendation_reason
         )
 
     async def batch_create_relations(self, relations_data: List[Dict]) -> List[PCBIndicatorSchemeRelation]:
@@ -387,8 +425,20 @@ class PCBIndicatorSchemeRelationController(
                 indicator_id=data["indicator_id"],
                 scheme_id=data["scheme_id"],
                 relevance_score=Decimal(str(data.get("relevance_score", 1.0))),
+                priority=data.get("priority", 1),
+                recommendation_reason=data.get("recommendation_reason")
             )
             relations.append(relation)
+        return relations
+
+    async def get_schemes_by_indicator(self, indicator_id: int) -> List[PCBIndicatorSchemeRelation]:
+        """根据指标ID获取推荐方案"""
+        relations = await self.model.filter(indicator_id=indicator_id)
+        return relations
+
+    async def get_indicators_by_scheme(self, scheme_id: int) -> List[PCBIndicatorSchemeRelation]:
+        """根据方案ID获取关联指标"""
+        relations = await self.model.filter(scheme_id=scheme_id)
         return relations
 
 

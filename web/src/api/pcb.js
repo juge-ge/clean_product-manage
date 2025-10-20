@@ -64,6 +64,10 @@ export const pcbPreAuditApi = {
   saveData: (enterpriseId, data) => 
     request.post(`/pcb/enterprise/${enterpriseId}/pre-audit`, data),
   
+  // 保存模块数据
+  saveModuleData: (enterpriseId, moduleName, data) => 
+    request.post(`/pcb/enterprise/${enterpriseId}/pre-audit/module/${moduleName}`, data),
+  
   // 提交预审核数据
   submitData: (enterpriseId) => 
     request.post(`/pcb/enterprise/${enterpriseId}/pre-audit/submit`)
@@ -246,6 +250,157 @@ export const enterpriseRawMaterialApi = {
     })
 }
 
+// 资源能源消耗API
+export const resourceConsumptionApi = {
+  // 获取所有资源能源消耗数据
+  getAllData: (enterpriseId) => 
+    request.get(`/resource-consumption/enterprise/${enterpriseId}/all-data`),
+  
+  // 保存所有资源能源消耗数据
+  saveAllData: (enterpriseId, data) => 
+    request.post(`/resource-consumption/enterprise/${enterpriseId}/all-data`, data),
+  
+  // 删除所有资源能源消耗数据
+  deleteAllData: (enterpriseId) => 
+    request.delete(`/resource-consumption/enterprise/${enterpriseId}/all-data`),
+  
+  // 用水消耗相关API
+  water: {
+    // 获取用水分类列表
+    getCategories: (enterpriseId) => 
+      request.get(`/resource-consumption/enterprise/${enterpriseId}/water-categories`),
+    
+    // 创建用水分类
+    createCategory: (enterpriseId, data) => 
+      request.post(`/resource-consumption/enterprise/${enterpriseId}/water-categories`, data),
+    
+    // 更新用水分类
+    updateCategory: (categoryId, data) => 
+      request.put(`/resource-consumption/water-categories/${categoryId}`, data),
+    
+    // 删除用水分类
+    deleteCategory: (categoryId) => 
+      request.delete(`/resource-consumption/water-categories/${categoryId}`),
+    
+    // 获取用水记录列表
+    getRecords: (enterpriseId, params = {}) => 
+      request.get(`/resource-consumption/enterprise/${enterpriseId}/water-records`, { params }),
+    
+    // 创建用水记录
+    createRecord: (enterpriseId, data) => 
+      request.post(`/resource-consumption/enterprise/${enterpriseId}/water-records`, data)
+  },
+  
+  // 用电消耗相关API
+  electricity: {
+    // 获取用电记录列表
+    getRecords: (enterpriseId, params = {}) => 
+      request.get(`/resource-consumption/enterprise/${enterpriseId}/electricity-records`, { params }),
+    
+    // 创建用电记录
+    createRecord: (enterpriseId, data) => 
+      request.post(`/resource-consumption/enterprise/${enterpriseId}/electricity-records`, data),
+    
+    // 更新用电记录
+    updateRecord: (recordId, data) => 
+      request.put(`/resource-consumption/electricity-records/${recordId}`, data)
+  },
+  
+  // 天然气消耗相关API
+  gas: {
+    // 获取天然气记录列表
+    getRecords: (enterpriseId, params = {}) => 
+      request.get(`/resource-consumption/enterprise/${enterpriseId}/gas-records`, { params }),
+    
+    // 创建天然气记录
+    createRecord: (enterpriseId, data) => 
+      request.post(`/resource-consumption/enterprise/${enterpriseId}/gas-records`, data),
+    
+    // 更新天然气记录
+    updateRecord: (recordId, data) => 
+      request.put(`/resource-consumption/gas-records/${recordId}`, data),
+    
+    // 删除天然气记录
+    deleteRecord: (recordId) => 
+      request.delete(`/resource-consumption/gas-records/${recordId}`)
+  },
+  
+  // 汇总数据相关API
+  summary: {
+    // 获取汇总数据
+    getSummary: (enterpriseId, year) => 
+      request.get(`/resource-consumption/enterprise/${enterpriseId}/summary`, { 
+        params: year ? { year } : {} 
+      }),
+    
+    // 计算汇总数据
+    calculateSummary: (enterpriseId, year) => 
+      request.post(`/resource-consumption/enterprise/${enterpriseId}/summary/calculate`, null, { 
+        params: { year } 
+      })
+  }
+}
+
+// PCB工艺装备API
+export const pcbProcessEquipmentApi = {
+  // 获取所有设备数据
+  getAllData: (enterpriseId) => 
+    request.get(`/process-equipment/enterprise/${enterpriseId}/all-data`),
+  
+  // 保存所有设备数据
+  saveAllData: (enterpriseId, data) => 
+    request.post(`/process-equipment/enterprise/${enterpriseId}/all-data`, data),
+  
+  // 删除所有设备数据
+  deleteAllData: (enterpriseId) => 
+    request.delete(`/process-equipment/enterprise/${enterpriseId}/all-data`)
+}
+
+// PCB污染防治API
+export const pcbPollutionControlApi = {
+  // 获取所有污染防治数据
+  getAllData: (enterpriseId) => 
+    request.get(`/pollution-control/enterprise/${enterpriseId}/all-data`),
+  
+  // 保存所有污染防治数据
+  saveAllData: (enterpriseId, data) => 
+    request.post(`/pollution-control/enterprise/${enterpriseId}/all-data`, data),
+  
+  // 删除所有污染防治数据
+  deleteAllData: (enterpriseId) => 
+    request.delete(`/pollution-control/enterprise/${enterpriseId}/all-data`)
+}
+
+// PCB固体废物管理API
+export const pcbSolidWasteApi = {
+  // 获取所有固体废物数据
+  getAllData: (enterpriseId) => 
+    request.get(`/solid-waste/enterprise/${enterpriseId}/all-data`),
+  
+  // 保存所有固体废物数据
+  saveAllData: (enterpriseId, data) => 
+    request.post(`/solid-waste/enterprise/${enterpriseId}/all-data`, data),
+  
+  // 删除所有固体废物数据
+  deleteAllData: (enterpriseId) => 
+    request.delete(`/solid-waste/enterprise/${enterpriseId}/all-data`)
+}
+
+// PCB自行监测API
+export const pcbSelfMonitoringApi = {
+  // 获取所有自行监测数据
+  getAllData: (enterpriseId) => 
+    request.get(`/self-monitoring/enterprise/${enterpriseId}/all-data`),
+  
+  // 保存所有自行监测数据
+  saveAllData: (enterpriseId, data) => 
+    request.post(`/self-monitoring/enterprise/${enterpriseId}/all-data`, data),
+  
+  // 删除所有自行监测数据
+  deleteAllData: (enterpriseId) => 
+    request.delete(`/self-monitoring/enterprise/${enterpriseId}/all-data`)
+}
+
 // 统一的PCB API对象
 export const pcbApi = {
   enterprise: pcbEnterpriseApi,
@@ -258,7 +413,12 @@ export const pcbApi = {
   report: pcbReportApi,
   production: pcbProductionApi,
   rawMaterial: rawMaterialApi,
-  enterpriseRawMaterial: enterpriseRawMaterialApi
+  enterpriseRawMaterial: enterpriseRawMaterialApi,
+  resourceConsumption: resourceConsumptionApi,
+  processEquipment: pcbProcessEquipmentApi,
+  pollutionControl: pcbPollutionControlApi,
+  solidWaste: pcbSolidWasteApi,
+  selfMonitoring: pcbSelfMonitoringApi
 }
 
 export default pcbApi

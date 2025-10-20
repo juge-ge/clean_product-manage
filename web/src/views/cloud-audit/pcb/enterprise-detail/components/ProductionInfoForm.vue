@@ -1,7 +1,7 @@
 <template>
   <div class="production-info-form">
     <!-- 1. 近三年产品产量 -->
-    <div class="section">
+    <div class="section sub-module">
       <div class="section-header">
         <h3 class="section-title">近三年产品产量</h3>
         <n-button type="primary" @click="addProductOutputRow">
@@ -27,7 +27,7 @@
           </div>
 
     <!-- 2. 企业近三年合格率 -->
-    <div class="section">
+    <div class="section sub-module">
       <div class="section-header">
         <h3 class="section-title">企业近三年合格率</h3>
         <n-button type="primary" @click="addQualificationRateRow">
@@ -53,7 +53,7 @@
           </div>
 
     <!-- 3. 企业近三年产值情况 -->
-    <div class="section">
+    <div class="section sub-module">
       <div class="section-header">
         <h3 class="section-title">企业近三年产值情况</h3>
         <n-button type="primary" @click="addOutputValueRow">
@@ -290,7 +290,7 @@ const productOutputColumns = [
           size: 'small',
           type: 'error',
           onClick: () => removeProductOutputRow(index)
-        }, { default: () => '删除' })
+        }, () => '删除')
       ])
     }
   }
@@ -341,7 +341,7 @@ const qualificationRateColumns = [
           size: 'small',
           type: 'error',
           onClick: () => removeQualificationRateRow(index)
-        }, { default: () => '删除' })
+        }, () => '删除')
       ])
     }
   }
@@ -420,7 +420,7 @@ const outputValueColumns = [
           size: 'small',
           type: 'error',
           onClick: () => removeOutputValueRow(index)
-        }, { default: () => '删除' })
+        }, () => '删除')
       ])
     }
   }
@@ -517,6 +517,7 @@ watch(() => props.modelValue, (newVal) => {
 
 .section {
   margin-bottom: 32px;
+  padding: 16px;
 }
 
 .section-header {
@@ -532,6 +533,7 @@ watch(() => props.modelValue, (newVal) => {
   color: #333;
   margin: 0;
   padding-bottom: 8px;
+  display: inline-block;
   border-bottom: 2px solid #ff8c00;
 }
 
@@ -557,6 +559,30 @@ watch(() => props.modelValue, (newVal) => {
 /* 表格标题文字加粗 */
 :deep(.n-data-table .n-data-table-th .n-data-table-th__content) {
   font-weight: 600;
+}
+
+/* 表格模块样式 */
+.sub-module {
+  border: 1px solid #e0e0e6;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sub-module:hover {
+  border-color: #18a058;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.15);
+}
+
+/* 表标题样式 */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  padding-bottom: 8px;
+  display: inline-block;
+  border-bottom: 2px solid #ff8c00;
 }
 </style>
 

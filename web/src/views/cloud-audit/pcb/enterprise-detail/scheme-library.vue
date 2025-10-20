@@ -334,6 +334,36 @@ const schemeColumns = [
     }
   },
   {
+    title: '主要应对指标编号',
+    key: 'indicator_numbers',
+    width: 150,
+    ellipsis: { tooltip: true },
+    render: (row) => {
+      const indicatorNumbers = row.related_indicators?.map(ind => ind.id).join(', ') || '暂无'
+      return h('span', { 
+        style: { 
+          fontSize: '14px',
+          color: indicatorNumbers === '暂无' ? '#999' : '#1890ff'
+        } 
+      }, indicatorNumbers)
+    }
+  },
+  {
+    title: '主要对应指标名称',
+    key: 'indicator_names',
+    width: 200,
+    ellipsis: { tooltip: true },
+    render: (row) => {
+      const indicatorNames = row.related_indicators?.map(ind => ind.name).join(', ') || '暂无'
+      return h('span', { 
+        style: { 
+          fontSize: '14px',
+          color: indicatorNames === '暂无' ? '#999' : '#52c41a'
+        } 
+      }, indicatorNames)
+    }
+  },
+  {
     title: '方案类型',
     key: 'scheme_type',
     width: 120,

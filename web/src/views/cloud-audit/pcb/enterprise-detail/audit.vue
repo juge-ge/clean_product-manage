@@ -122,28 +122,73 @@
           
           <!-- 推荐方案列 -->
           <template #schemes="{ row }">
-            <n-select
-              v-if="!row.isCategory"
-              v-model:value="row.selectedSchemes"
-              :options="row.recommendedSchemes"
-              placeholder="选择方案"
-              size="small"
-              style="width: 250px"
-              clearable
-              multiple
-              max-tag-count="2"
-            />
+            <div v-if="!row.isCategory" class="scheme-selector">
+              <n-select
+                v-model:value="row.selectedSchemes"
+                :options="getSchemeOptions(row.recommendedSchemes)"
+                placeholder="选择方案"
+                size="small"
+                style="width: 250px"
+                clearable
+                multiple
+                max-tag-count="2"
+                @update:value="(value) => handleSchemeSelection(row, value)"
+              >
+                <template #option="{ option }">
+                  <div class="scheme-option">
+                    <div class="scheme-name">{{ option.label }}</div>
+                    <div class="scheme-type">{{ option.type }}</div>
+                  </div>
+                </template>
+              </n-select>
+              <n-button 
+                v-if="row.recommendedSchemes && row.recommendedSchemes.length > 0"
+                size="tiny" 
+                type="info" 
+                text
+                @click="showSchemeDetails(row)"
+                class="ml-2"
+              >
+                预览
+              </n-button>
+            </div>
           </template>
         </n-data-table>
       </n-card>
     
     <!-- 推荐方案弹窗 -->
-    <n-modal v-model:show="showSchemeModal">
-      <n-card style="width: 600px" title="推荐改进方案">
-        <div v-for="scheme in currentSchemes" :key="scheme.id" class="mb-2">
-          <strong>{{ scheme.name }}:</strong> {{ scheme.description }}
-        </div>
-      </n-card>
+    <n-modal v-model:show="showSchemeModal" preset="card" title="推荐改进方案" style="width: 800px">
+      <div v-if="currentSchemes && currentSchemes.length > 0">
+        <n-list>
+          <n-list-item v-for="scheme in currentSchemes" :key="scheme.id">
+            <n-thing>
+              <template #header>
+                <n-space>
+                  <span>{{ scheme.name }}</span>
+                  <n-tag size="small" type="info">{{ scheme.type }}</n-tag>
+                  <n-tag size="small" type="success">优先级: {{ scheme.priority }}</n-tag>
+                </n-space>
+              </template>
+              <template #description>
+                <div class="scheme-details">
+                  <p><strong>方案描述：</strong>{{ scheme.description }}</p>
+                  <p><strong>实施方案：</strong>{{ scheme.implementation }}</p>
+                  <p><strong>预期效果：</strong>{{ scheme.expected_effect }}</p>
+                  <n-space>
+                    <n-tag type="success">投资：{{ scheme.investment }}万元</n-tag>
+                    <n-tag type="warning">回收期：{{ scheme.payback_period }}年</n-tag>
+                    <n-tag type="info">关联度：{{ scheme.relevance_score }}</n-tag>
+                  </n-space>
+                  <p v-if="scheme.recommendation_reason" class="mt-2">
+                    <strong>推荐理由：</strong>{{ scheme.recommendation_reason }}
+                  </p>
+                </div>
+              </template>
+            </n-thing>
+          </n-list-item>
+        </n-list>
+      </div>
+      <n-empty v-else description="暂无推荐方案" />
     </n-modal>
 
     <!-- 模块导航按钮 -->
@@ -180,7 +225,11 @@ import {
   NModal,
   NSelect,
   NProgress,
-  NTooltip
+  NTooltip,
+  NList,
+  NListItem,
+  NThing,
+  NEmpty
 } from 'naive-ui'
 import TheIcon from '@/components/icon/TheIcon.vue'
 // import { mockDetailApi } from '@/mock/pcb-detail'
@@ -554,6 +603,42 @@ const getLevelTagType = (level) => {
   return getLevelType(level)
 }
 
+// 获取方案选项
+const getSchemeOptions = (schemes) => {
+  if (!schemes || schemes.length === 0) return []
+  return schemes.map(scheme => ({
+    label: scheme.name,
+    value: scheme.id,
+    type: scheme.type,
+    scheme: scheme
+  }))
+}
+
+// 处理方案选择
+const handleSchemeSelection = async (row, selectedSchemeIds) => {
+  try {
+    // 更新本地数据
+    row.selectedSchemes = selectedSchemeIds
+    
+    // 调用API更新审核结果
+    await api.pcb.audit.updateIndicator(props.enterpriseId, row.id, {
+      level: row.level,
+      selected_scheme_ids: selectedSchemeIds
+    })
+    
+    window.$message.success('方案选择已保存')
+  } catch (error) {
+    console.error('保存方案选择失败:', error)
+    window.$message.error('保存方案选择失败')
+  }
+}
+
+// 显示方案详情
+const showSchemeDetails = (row) => {
+  currentSchemes.value = row.recommendedSchemes || []
+  showSchemeModal.value = true
+}
+
 // 更新指标等级
 const handleIndicatorUpdate = async (indicatorId, level, reason = null) => {
   try {
@@ -666,7 +751,8 @@ const handleSubmitAudit = async () => {
             current_value: indicator.currentValue,
             level: indicator.level,
             score: indicator.score,
-            remark: indicator.remark || ''
+            remark: indicator.remark || '',
+            selected_scheme_ids: indicator.selectedSchemes || []
           })
           
           // 收集选定的方案
@@ -864,13 +950,19 @@ const fetchAuditData = async () => {
   try {
     loading.value = true
     
+    console.log('开始获取审核数据...')
+    
     // 1. 获取所有指标定义
+    console.log('获取指标列表...')
     const indicatorsResponse = await api.pcb.indicator.getList()
     const allIndicators = indicatorsResponse.data || []
+    console.log(`获取到 ${allIndicators.length} 个指标`)
     
     // 2. 获取企业的审核结果
+    console.log('获取审核结果...')
     const resultsResponse = await api.pcb.audit.getResults(props.enterpriseId)
     const auditResults = resultsResponse.data || []
+    console.log(`获取到 ${auditResults.length} 个审核结果`)
     
     // 3. 合并指标定义和审核结果
     const mergedData = allIndicators.map(indicator => {
@@ -881,27 +973,41 @@ const fetchAuditData = async () => {
         level: result?.level || null,
         score: result?.score || 0,
         remark: result?.remark || '',
-        recommendedSchemes: [],
-        selectedSchemes: []
+        selectedSchemes: result?.selected_scheme_ids || [],
+        recommendedSchemes: result?.recommended_schemes || []
       }
     })
     
-    // 4. 为每个指标加载推荐方案
-    for (const indicator of mergedData) {
-      if (indicator.level && indicator.level !== 'I级') {
-        try {
-          const schemes = await getRecommendedSchemes(indicator.id)
-          indicator.recommendedSchemes = schemes
-        } catch (error) {
-          console.error(`获取指标${indicator.id}的推荐方案失败:`, error)
-          indicator.recommendedSchemes = []
-        }
-      }
-    }
+    console.log('合并后的数据:', mergedData.length)
     
-    // 5. 构建树形结构
+    // 4. 构建树形结构（先不加载推荐方案，避免延迟）
     auditTreeData.value = buildTreeData(mergedData)
     calculateSummary()
+    
+    console.log('树形数据构建完成:', auditTreeData.value.length)
+    
+    // 5. 异步加载推荐方案（不阻塞界面显示）
+    setTimeout(async () => {
+      console.log('开始异步加载推荐方案...')
+      for (const category of auditTreeData.value) {
+        if (category.children) {
+          for (const indicator of category.children) {
+            if (indicator.level && indicator.level !== 'I级') {
+              try {
+                const schemes = await getRecommendedSchemes(indicator.id)
+                indicator.recommendedSchemes = schemes
+                console.log(`指标${indicator.id}加载了${schemes.length}个推荐方案`)
+              } catch (error) {
+                console.error(`获取指标${indicator.id}的推荐方案失败:`, error)
+                indicator.recommendedSchemes = []
+              }
+            }
+          }
+        }
+      }
+      console.log('推荐方案加载完成')
+    }, 100)
+    
   } catch (error) {
     console.error('获取审核数据失败:', error)
     window.$message.error('获取审核数据失败')
@@ -1050,6 +1156,32 @@ onMounted(() => {
 
 .text-gray-400 {
   color: #9ca3af;
+}
+
+.scheme-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scheme-option {
+  padding: 4px 0;
+}
+
+.scheme-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.scheme-type {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.scheme-details p {
+  margin: 8px 0;
+  line-height: 1.5;
 }
 
 .scheme-content {

@@ -74,6 +74,10 @@ class PCBAuditResult(BaseModel, TimestampMixin):
     manual_override = fields.BooleanField(default=False, description="是否手动调整")
     override_reason = fields.TextField(null=True, description="调整原因")
     
+    # 方案选择
+    selected_scheme_ids = fields.JSONField(null=True, description="选择的方案ID列表")
+    scheme_selection_date = fields.DatetimeField(null=True, description="方案选择时间")
+    
     # 审核人信息
     auditor_id = fields.BigIntField(null=True, description="审核人ID", index=True)
     audit_date = fields.DatetimeField(null=True, description="审核时间")
@@ -114,6 +118,8 @@ class PCBIndicatorSchemeRelation(BaseModel, TimestampMixin):
     indicator_id = fields.BigIntField(description="指标ID", index=True)
     scheme_id = fields.BigIntField(description="方案ID", index=True)
     relevance_score = fields.DecimalField(max_digits=3, decimal_places=2, default=1.0, description="关联度")
+    priority = fields.IntField(default=1, description="优先级(1-10)")
+    recommendation_reason = fields.TextField(null=True, description="推荐理由")
     
     class Meta:
         table = "pcb_indicator_scheme_relation"

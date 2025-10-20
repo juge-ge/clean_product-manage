@@ -17,7 +17,7 @@ from app.core.dependency import DependAuth
 router = APIRouter()
 
 
-@router.get("/enterprise/{enterprise_id}/production-data", response_model=PCBProductionDataResponse)
+@router.get("/enterprise/{enterprise_id}/production-data")
 async def get_production_data(
     enterprise_id: int,
     current_user=DependAuth
