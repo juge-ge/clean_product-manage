@@ -68,77 +68,102 @@ export default {
       ]
     },
     {
-      path: 'enterprise-audit',
-      name: 'EnterpriseAudit',
-      component: () => import('@/views/clean-production/enterprise-audit/index.vue'),
+      path: 'meetings-publicity',
+      name: 'MeetingsPublicity',
+      component: () => import('@/views/clean-production/meetings-publicity/index.vue'),
+      meta: { 
+        title: '会议与宣传',
+        icon: 'mdi:presentation'
+      }
+    },
+    {
+      path: 'enterprise-audit-management',
+      name: 'EnterpriseAuditManagement',
+      component: () => import('@/views/clean-production/enterprise-audit-management/index.vue'),
       meta: { 
         title: '企业清洁生产审核管理',
         icon: 'mdi:domain'
       }
     },
     {
-      path: 'cases',
-      name: 'Cases',
-      component: RouterView,
+      path: 'typical-cases',
+      name: 'TypicalCases',
+      component: () => import('@/views/clean-production/typical-cases/index.vue'),
       meta: { 
         title: '清洁生产审核典型案例',
         icon: 'mdi:file-star'
-      },
-      children: [
-        {
-          path: 'industrial-park',
-          name: 'IndustrialPark',
-          component: () => import('@/views/clean-production/cases/industrial-park/index.vue'),
-          meta: { 
-            title: '工业园区',
-            icon: 'mdi:factory'
-          }
-        },
-        {
-          path: 'industry',
-          name: 'Industry',
-          component: () => import('@/views/clean-production/cases/industry/index.vue'),
-          meta: { 
-            title: '行业',
-            icon: 'mdi:domain'
-          }
-        },
-        {
-          path: 'enterprise',
-          name: 'Enterprise',
-          component: () => import('@/views/clean-production/cases/enterprise/index.vue'),
-          meta: { 
-            title: '企业',
-            icon: 'mdi:office-building'
-          }
-        },
-        {
-          path: 'region',
-          name: 'Region',
-          component: () => import('@/views/clean-production/cases/region/index.vue'),
-          meta: { 
-            title: '区域',
-            icon: 'mdi:map'
-          }
-        }
-      ]
+      }
     },
     {
-      path: 'expert-library',
-      name: 'ExpertLibrary',
-      component: () => import('@/views/clean-production/expert-library/index.vue'),
+      path: 'industrial-parks',
+      name: 'IndustrialParks',
+      component: () => import('@/views/clean-production/industrial-parks/index.vue'),
+      meta: { 
+        title: '工业园区',
+        icon: 'mdi:factory'
+      }
+    },
+    {
+      path: 'industry',
+      name: 'Industry',
+      component: () => import('@/views/clean-production/industry/index.vue'),
+      meta: { 
+        title: '行业',
+        icon: 'mdi:domain'
+      }
+    },
+    {
+      path: 'enterprises',
+      name: 'Enterprises',
+      component: () => import('@/views/clean-production/enterprises/index.vue'),
+      meta: { 
+        title: '企业',
+        icon: 'mdi:office-building'
+      }
+    },
+    {
+      path: 'regions',
+      name: 'Regions',
+      component: () => import('@/views/clean-production/regions/index.vue'),
+      meta: { 
+        title: '区域',
+        icon: 'mdi:map'
+      }
+    },
+    {
+      path: 'expert-database',
+      name: 'ExpertDatabase',
+      component: () => import('@/views/clean-production/expert-database/index.vue'),
       meta: { 
         title: '专家库',
         icon: 'mdi:account-tie'
       }
     },
     {
-      path: 'international',
-      name: 'International',
-      component: () => import('@/views/clean-production/international/index.vue'),
+      path: 'international-cooperation',
+      name: 'InternationalCooperation',
+      component: () => import('@/views/clean-production/international-cooperation/index.vue'),
       meta: { 
         title: '国际合作',
         icon: 'mdi:earth'
+      }
+    },
+    {
+      path: 'technology-integration',
+      name: 'TechnologyIntegration',
+      component: () => import('@/views/clean-production/technology-integration/index.vue'),
+      meta: { 
+        title: '清洁生产技术集成',
+        icon: 'mdi:cog'
+      }
+    },
+    {
+      path: 'smart-decision',
+      name: 'SmartDecision',
+      component: () => import('@/views/clean-production/smart-decision/index.vue'),
+      meta: { 
+        title: '清洁生产智慧决策',
+        icon: 'mdi:brain'
       }
     }
   ]

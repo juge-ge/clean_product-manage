@@ -70,6 +70,61 @@ export default {
           ]
         }
       ]
+    },
+    {
+      name: '会议与宣传',
+      path: 'meetings-publicity',
+      component: () => import('./meetings-publicity/index.vue')
+    },
+    {
+      name: '企业清洁生产审核管理',
+      path: 'enterprise-audit-management',
+      component: () => import('./enterprise-audit-management/index.vue')
+    },
+    {
+      name: '清洁生产审核典型案例',
+      path: 'typical-cases',
+      component: () => import('./typical-cases/index.vue')
+    },
+    {
+      name: '工业园区',
+      path: 'industrial-parks',
+      component: () => import('./industrial-parks/index.vue')
+    },
+    {
+      name: '行业',
+      path: 'industry',
+      component: () => import('./industry/index.vue')
+    },
+    {
+      name: '企业',
+      path: 'enterprises',
+      component: () => import('./enterprises/index.vue')
+    },
+    {
+      name: '区域',
+      path: 'regions',
+      component: () => import('./regions/index.vue')
+    },
+    {
+      name: '专家库',
+      path: 'expert-database',
+      component: () => import('./expert-database/index.vue')
+    },
+    {
+      name: '国际合作',
+      path: 'international-cooperation',
+      component: () => import('./international-cooperation/index.vue')
+    },
+    {
+      name: '清洁生产技术集成',
+      path: 'technology-integration',
+      component: () => import('./technology-integration/index.vue')
+    },
+    {
+      name: '清洁生产智慧决策',
+      path: 'smart-decision',
+      component: () => import('./smart-decision/index.vue')
     }
   ]
 }

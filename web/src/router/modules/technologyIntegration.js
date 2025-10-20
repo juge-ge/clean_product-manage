@@ -13,7 +13,7 @@ export default {
     {
       path: 'industry-technology',
       name: 'IndustryTechnology',
-      component: () => import('@/views/technology-integration/industry-technology/index.vue'),
+      component: () => import('@/views/clean-production/technology-integration/index.vue'),
       meta: { 
         title: '行业技术库',
         icon: 'mdi:database'
@@ -22,7 +22,7 @@ export default {
     {
       path: 'simulation',
       name: 'Simulation',
-      component: () => import('@/views/technology-integration/simulation/index.vue'),
+      component: () => import('@/views/clean-production/technology-integration/index.vue'),
       meta: { 
         title: '模拟评估',
         icon: 'mdi:chart-line'
