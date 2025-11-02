@@ -8,15 +8,17 @@ from decimal import Decimal
 
 
 class PCBEquipmentRecordBase(BaseModel):
-    """设备记录基础模式"""
-    equipment_name: str = Field(..., description="设备名称", max_length=100)
-    equipment_model: str = Field(..., description="设备型号", max_length=200)
-    motor_model: str = Field(..., description="电机型号", max_length=100)
-    power: Optional[Decimal] = Field(None, description="功率(KW)", ge=0)
-    quantity: int = Field(1, description="数量", ge=1)
-    process: str = Field(..., description="应用工艺", max_length=100)
-    status: str = Field("良好", description="运行状况", max_length=50)
-    remark: Optional[str] = Field(None, description="备注")
+    """设备记录基础模式 - 支持前端camelCase字段名"""
+    equipment_name: str = Field(..., alias="equipmentName", description="设备名称", max_length=100)
+    equipment_model: str = Field(..., alias="equipmentModel", description="设备型号", max_length=200)
+    motor_model: str = Field(..., alias="motorModel", description="电机型号", max_length=100)
+    power: Optional[Decimal] = Field(None, alias="power", description="功率(KW)", ge=0)
+    quantity: int = Field(1, alias="quantity", description="数量", ge=1)
+    process: str = Field(..., alias="process", description="应用工艺", max_length=100)
+    status: str = Field("良好", alias="status", description="运行状况", max_length=50)
+    remark: Optional[str] = Field(None, alias="remark", description="备注")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}  # Pydantic 2.x: 允许额外字段和字段名别名
 
 
 class PCBEquipmentRecordCreate(PCBEquipmentRecordBase):
@@ -45,6 +47,21 @@ class PCBEquipmentRecordResponse(PCBEquipmentRecordBase):
 
     class Config:
         from_attributes = True
+
+
+class PCBEquipmentItemResponse(BaseModel):
+    """设备项响应 - 前端camelCase格式"""
+    id: Optional[int] = None
+    equipmentName: str = Field(..., description="设备名称")
+    equipmentModel: str = Field(..., description="设备型号")
+    motorModel: str = Field(..., description="电机型号")
+    power: Optional[float] = Field(None, description="功率(KW)")
+    quantity: int = Field(1, description="数量")
+    process: str = Field(..., description="应用工艺")
+    status: str = Field("良好", description="运行状况")
+    remark: Optional[str] = Field(None, description="备注")
+    
+    model_config = {"extra": "allow"}
 
 
 class PCBEquipmentCategoryBase(BaseModel):
@@ -77,9 +94,23 @@ class PCBEquipmentCategoryResponse(PCBEquipmentCategoryBase):
 
 
 # 批量操作相关Schema
+class PCBEquipmentItem(BaseModel):
+    """设备项Schema - 支持前端camelCase字段名，允许空字段"""
+    equipmentName: Optional[str] = Field(None, description="设备名称", max_length=100)
+    equipmentModel: Optional[str] = Field(None, description="设备型号", max_length=200)
+    motorModel: Optional[str] = Field(None, description="电机型号", max_length=100)
+    power: Optional[float] = Field(None, description="功率(KW)", ge=0)
+    quantity: Optional[int] = Field(1, description="数量", ge=1)
+    process: Optional[str] = Field(None, description="应用工艺", max_length=100)
+    status: Optional[str] = Field("良好", description="运行状况", max_length=50)
+    remark: Optional[str] = Field(None, description="备注")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
+
+
 class PCBEquipmentDataRequest(BaseModel):
     """设备数据请求"""
-    equipment: List[PCBEquipmentRecordCreate] = Field(default_factory=list, description="设备记录数据")
+    items: List[PCBEquipmentItem] = Field(default_factory=list, description="设备记录列表")
 
 
 class PCBEquipmentDataResponse(BaseModel):

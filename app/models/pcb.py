@@ -42,7 +42,16 @@ class PCBIndicator(BaseModel, TimestampMixin):
     # indicator_type: qualitative(定性), quantitative(定量), limiting(限定性)
     
     unit = fields.CharField(max_length=50, null=True, description="计量单位")
-    weight = fields.DecimalField(max_digits=5, decimal_places=2, default=1.0, description="指标权重")
+    
+    # 权重字段
+    category_weight = fields.DecimalField(max_digits=5, decimal_places=3, default=0.0, 
+                                         description="一级指标权重")
+    weight = fields.DecimalField(max_digits=5, decimal_places=3, default=1.0, 
+                                 description="二级指标权重")
+    
+    # 动态权重标记：某些指标的权重需要根据产量动态计算（带*标记）
+    is_dynamic_weight = fields.BooleanField(default=False, 
+                                           description="是否需要根据产量动态计算权重")
     
     # 评级标准（JSON格式存储不同等级的标准值）
     level_standards = fields.JSONField(null=True, description="评级标准")
@@ -205,5 +214,94 @@ class PCBAuditReport(BaseModel, TimestampMixin):
     
     class Meta:
         table = "pcb_audit_report"
+
+
+class PCBProblemSolutionScoring(BaseModel, TimestampMixin):
+    """PCB问题方案权重总和计分排序表"""
+    enterprise_id = fields.BigIntField(description="企业ID", index=True)
+    
+    # 因素配置（JSON格式存储）
+    factors = fields.JSONField(null=True, description="因素列表，格式: [{'key': str, 'name': str, 'weight': int}, ...]")
+    
+    # 审核重点配置（JSON格式存储）
+    focuses = fields.JSONField(null=True, description="审核重点列表，格式: [{'id': int, 'name': str}, ...]")
+    
+    # 评分矩阵（JSON格式存储）
+    # 格式: {focus_id: {factor_key: {'r': int, 'rw': int}, ...}, ...}
+    scores = fields.JSONField(null=True, description="评分矩阵")
+    
+    # 计算结果（JSON格式存储）
+    rankings = fields.JSONField(null=True, description="排序结果，格式: [{'id': int, 'name': str, 'total_score': float}, ...]")
+    
+    class Meta:
+        table = "pcb_problem_solution_scoring"
+        unique_together = (("enterprise_id",),)
+
+
+class PCBLowCostScheme(BaseModel, TimestampMixin):
+    """PCB无/低费方案表（企业自定义方案）"""
+    enterprise_id = fields.BigIntField(description="企业ID", index=True)
+    
+    # 方案来源
+    source = fields.CharField(max_length=50, default="custom", description="方案来源")
+    # source: custom(自定义), library(方案库导入)
+    
+    # 如果是从方案库导入，关联方案ID
+    scheme_id = fields.BigIntField(null=True, description="关联方案库方案ID", index=True)
+    
+    # 关联指标ID（用于从方案库导入时，根据指标筛选）
+    indicator_ids = fields.JSONField(null=True, description="关联指标ID列表")
+    
+    # 方案基本信息
+    name = fields.CharField(max_length=200, description="方案名称", index=True)
+    intro = fields.TextField(null=True, description="方案简介")
+    
+    # 效益
+    economic_benefit = fields.TextField(null=True, description="经济效益")
+    environment_benefit = fields.TextField(null=True, description="环境效益")
+    
+    # 备注
+    remark = fields.TextField(null=True, description="备注")
+    
+    class Meta:
+        table = "pcb_low_cost_scheme"
+
+
+class PCBMediumHighCostScheme(BaseModel, TimestampMixin):
+    """PCB中/高费方案表（企业自定义方案）"""
+    enterprise_id = fields.BigIntField(description="企业ID", index=True)
+    
+    # 方案来源
+    source = fields.CharField(max_length=50, default="custom", description="方案来源")
+    # source: custom(自定义), library(方案库导入)
+    
+    # 费用等级
+    cost_level = fields.CharField(max_length=20, default="middle", description="费用等级", index=True)
+    # cost_level: middle(中费), high(高费)
+    
+    # 如果是从方案库导入，关联方案ID
+    scheme_id = fields.BigIntField(null=True, description="关联方案库方案ID", index=True)
+    
+    # 关联指标ID（用于从方案库导入时，根据指标筛选）
+    indicator_ids = fields.JSONField(null=True, description="关联指标ID列表")
+    
+    # 方案基本信息
+    name = fields.CharField(max_length=200, description="方案名称", index=True)
+    intro = fields.TextField(null=True, description="方案简介")
+    
+    # 方案内容（仅自定义方案需要）
+    problem = fields.TextField(null=True, description="解决的问题")
+    content = fields.TextField(null=True, description="方案内容/实施步骤")
+    effect = fields.TextField(null=True, description="预期效果")
+    
+    # 效益
+    economic_benefit = fields.TextField(null=True, description="经济效益")
+    environment_benefit = fields.TextField(null=True, description="环境效益")
+    
+    # 备注
+    remark = fields.TextField(null=True, description="备注")
+    
+    class Meta:
+        table = "pcb_medium_high_cost_scheme"
 
 

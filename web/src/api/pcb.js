@@ -48,7 +48,10 @@ export const pcbAuditApi = {
     request.post(`/pcb/enterprise/${enterpriseId}/audit/batch`, data),
   
   // 获取审核汇总
-  getSummary: (enterpriseId) => request.get(`/pcb/enterprise/${enterpriseId}/audit/summary`),
+  getSummary: (enterpriseId, userInputOutputs = null) => {
+    const params = userInputOutputs ? { user_input_outputs: userInputOutputs } : {}
+    return request.get(`/pcb/enterprise/${enterpriseId}/audit/summary`, { params })
+  },
   
   // 自动计算审核结果
   autoCalculate: (enterpriseId) => 
@@ -179,11 +182,20 @@ export const pcbPlanningApi = {
 // PCB审核报告API
 export const pcbReportApi = {
   // 获取审核报告
-  getReport: (enterpriseId) => request.get(`/pcb/enterprise/${enterpriseId}/report`),
+  getReport: (enterpriseId) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/report`),
   
   // 生成审核报告
-  generate: (enterpriseId, params) => 
-    request.post(`/pcb/enterprise/${enterpriseId}/report/generate`, null, { params }),
+  generateReport: (enterpriseId, data) => 
+    request.post(`/pcb/enterprise/${enterpriseId}/report/generate`, data),
+  
+  // 预览审核报告
+  getPreview: (enterpriseId) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/report/preview`),
+  
+  // 导出Word报告
+  exportWord: (enterpriseId) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/report/download`),
   
   // 提交审核报告
   submit: (enterpriseId) => 
@@ -206,7 +218,98 @@ export const pcbProductionApi = {
   
   // 删除企业生产情况数据
   deleteData: (enterpriseId) => 
-    request.delete(`/pcb/enterprise/${enterpriseId}/production-data`)
+    request.delete(`/pcb/enterprise/${enterpriseId}/production-data`),
+  
+  // 获取近三年产品产量
+  getThreeYearsProductOutput: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/production/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年产品产量
+  saveThreeYearsProductOutput: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/production/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取近三年合格率
+  getThreeYearsQualificationRate: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/qualification-rate/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年合格率
+  saveThreeYearsQualificationRate: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/qualification-rate/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取近三年产值
+  getThreeYearsOutputValue: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/output-value/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年产值
+  saveThreeYearsOutputValue: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/output-value/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取近三年原辅材料使用情况
+  getThreeYearsRawMaterialUsage: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/raw-materials/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年原辅材料使用情况
+  saveThreeYearsRawMaterialUsage: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/raw-materials/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取近三年用水情况
+  getThreeYearsWaterConsumption: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/consumption/water/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年用水情况
+  saveThreeYearsWaterConsumption: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/consumption/water/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取近三年用电情况
+  getThreeYearsElectricityConsumption: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/consumption/electricity/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年用电情况
+  saveThreeYearsElectricityConsumption: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/consumption/electricity/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取近三年天然气情况
+  getThreeYearsGasConsumption: (enterpriseId, yearRange) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/consumption/gas/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年天然气情况
+  saveThreeYearsGasConsumption: (enterpriseId, yearRange, items) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/consumption/gas/three-years`, {
+      year_range: yearRange,
+      items
+    })
 }
 
 // 原辅材料API
@@ -343,11 +446,19 @@ export const resourceConsumptionApi = {
 
 // PCB工艺装备API
 export const pcbProcessEquipmentApi = {
-  // 获取所有设备数据
+  // 获取企业设备信息
+  getEquipment: (enterpriseId) => 
+    request.get(`/pcb/enterprise/${enterpriseId}/equipment`),
+  
+  // 保存企业设备信息
+  saveEquipment: (enterpriseId, items) => 
+    request.post(`/pcb/enterprise/${enterpriseId}/equipment`, { items }),
+  
+  // 获取所有设备数据（兼容旧接口）
   getAllData: (enterpriseId) => 
     request.get(`/process-equipment/enterprise/${enterpriseId}/all-data`),
   
-  // 保存所有设备数据
+  // 保存所有设备数据（兼容旧接口）
   saveAllData: (enterpriseId, data) => 
     request.post(`/process-equipment/enterprise/${enterpriseId}/all-data`, data),
   
@@ -368,16 +479,58 @@ export const pcbPollutionControlApi = {
   
   // 删除所有污染防治数据
   deleteAllData: (enterpriseId) => 
-    request.delete(`/pollution-control/enterprise/${enterpriseId}/all-data`)
+    request.delete(`/pollution-control/enterprise/${enterpriseId}/all-data`),
+  
+  // 获取废水产生分析
+  getWastewaterAnalysis: (enterpriseId) =>
+    request.get(`/pollution-control/enterprise/${enterpriseId}/wastewater-analysis`),
+  
+  // 批量保存废水产生分析
+  batchSaveWastewaterAnalysis: (enterpriseId, items) =>
+    request.post(`/pollution-control/enterprise/${enterpriseId}/wastewater-analysis/batch`, items),
+  
+  // 获取废气产生情况
+  getWasteGasAnalysis: (enterpriseId) =>
+    request.get(`/pollution-control/enterprise/${enterpriseId}/waste-gas-analysis`),
+  
+  // 批量保存废气产生情况
+  batchSaveWasteGasAnalysis: (enterpriseId, items) =>
+    request.post(`/pollution-control/enterprise/${enterpriseId}/waste-gas-analysis/batch`, items),
+  
+  // 获取近三年废水情况统计
+  getThreeYearsWastewaterStat: (enterpriseId, yearRange) =>
+    request.get(`/pollution-control/enterprise/${enterpriseId}/wastewater-stat/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年废水情况统计
+  saveThreeYearsWastewaterStat: (enterpriseId, yearRange, items) =>
+    request.post(`/pollution-control/enterprise/${enterpriseId}/wastewater-stat/three-years`, {
+      year_range: yearRange,
+      items
+    })
 }
 
 // PCB固体废物管理API
 export const pcbSolidWasteApi = {
-  // 获取所有固体废物数据
+  // 获取近三年固体废物情况
+  getThreeYearsSolidWaste: (enterpriseId, yearRange) =>
+    request.get(`/solid-waste/enterprise/${enterpriseId}/three-years`, {
+      params: { year_range: yearRange }
+    }),
+  
+  // 保存近三年固体废物情况
+  saveThreeYearsSolidWaste: (enterpriseId, yearRange, items) =>
+    request.post(`/solid-waste/enterprise/${enterpriseId}/three-years`, {
+      year_range: yearRange,
+      items
+    }),
+  
+  // 获取所有固体废物数据（保留旧接口）
   getAllData: (enterpriseId) => 
     request.get(`/solid-waste/enterprise/${enterpriseId}/all-data`),
   
-  // 保存所有固体废物数据
+  // 保存所有固体废物数据（保留旧接口）
   saveAllData: (enterpriseId, data) => 
     request.post(`/solid-waste/enterprise/${enterpriseId}/all-data`, data),
   
@@ -386,19 +539,239 @@ export const pcbSolidWasteApi = {
     request.delete(`/solid-waste/enterprise/${enterpriseId}/all-data`)
 }
 
+// PCB资源利用API
+export const pcbResourceUtilizationApi = {
+  // 能源消耗
+  getEnergyConsumption: (enterpriseId) =>
+    request.get(`/resource-utilization/enterprise/${enterpriseId}/energy-consumption`),
+  
+  batchSaveEnergyConsumption: (enterpriseId, items) =>
+    request.post(`/resource-utilization/enterprise/${enterpriseId}/energy-consumption`, items),
+  
+  // 新鲜水耗
+  getFreshWaterConsumption: (enterpriseId) =>
+    request.get(`/resource-utilization/enterprise/${enterpriseId}/fresh-water-consumption`),
+  
+  batchSaveFreshWaterConsumption: (enterpriseId, items) =>
+    request.post(`/resource-utilization/enterprise/${enterpriseId}/fresh-water-consumption`, items),
+  
+  // 废水总量
+  getWastewaterTotalConsumption: (enterpriseId) =>
+    request.get(`/resource-utilization/enterprise/${enterpriseId}/wastewater-total-consumption`),
+  
+  batchSaveWastewaterTotalConsumption: (enterpriseId, items) =>
+    request.post(`/resource-utilization/enterprise/${enterpriseId}/wastewater-total-consumption`, items),
+  
+  // 废水中总铜浓度
+  getWastewaterCuConsumption: (enterpriseId) =>
+    request.get(`/resource-utilization/enterprise/${enterpriseId}/wastewater-cu-consumption`),
+  
+  batchSaveWastewaterCuConsumption: (enterpriseId, items) =>
+    request.post(`/resource-utilization/enterprise/${enterpriseId}/wastewater-cu-consumption`, items),
+  
+  // 废水中COD浓度
+  getWastewaterCODConsumption: (enterpriseId) =>
+    request.get(`/resource-utilization/enterprise/${enterpriseId}/wastewater-cod-consumption`),
+  
+  batchSaveWastewaterCODConsumption: (enterpriseId, items) =>
+    request.post(`/resource-utilization/enterprise/${enterpriseId}/wastewater-cod-consumption`, items),
+  
+  // 原/辅料消耗（覆铜板）
+  getRawMaterialConsumption: (enterpriseId) =>
+    request.get(`/resource-utilization/enterprise/${enterpriseId}/raw-material-consumption`),
+  
+  batchSaveRawMaterialConsumption: (enterpriseId, items) =>
+    request.post(`/resource-utilization/enterprise/${enterpriseId}/raw-material-consumption`, items),
+}
+
+// PCB审核选项型数据API
+export const pcbAuditOptionsApi = {
+  // 生产工艺与装备要求
+  getProcessRequirement: (enterpriseId) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/process-requirement`),
+  
+  saveProcessRequirement: (enterpriseId, data) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/process-requirement`, data),
+  
+  // 温室气体排放
+  getGreenhouseGasEmission: (enterpriseId) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/greenhouse-gas-emission`),
+  
+  saveGreenhouseGasEmission: (enterpriseId, data) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/greenhouse-gas-emission`, data),
+  
+  // 产品特征
+  getProductCharacteristics: (enterpriseId) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/product-characteristics`),
+  
+  saveProductCharacteristics: (enterpriseId, data) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/product-characteristics`, data),
+  
+  // 清洁生产管理
+  getCleanProductionManagement: (enterpriseId) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/clean-production-management`),
+  
+  saveCleanProductionManagement: (enterpriseId, data) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/clean-production-management`, data),
+  
+  // 资源综合利用
+  getResourceReutilization: (enterpriseId) =>
+    request.get(`/pcb/enterprise/${enterpriseId}/resource-reutilization`),
+  
+  saveResourceReutilization: (enterpriseId, data) =>
+    request.post(`/pcb/enterprise/${enterpriseId}/resource-reutilization`, data),
+}
+
 // PCB自行监测API
 export const pcbSelfMonitoringApi = {
-  // 获取所有自行监测数据
+  // 获取有组织废气检测记录
+  getOrganizedGasBatch: (enterpriseId) =>
+    request.get(`/self-monitoring/enterprise/${enterpriseId}/organized-gas/batch`),
+  
+  // 批量保存有组织废气检测记录
+  batchSaveOrganizedGas: (enterpriseId, items) =>
+    request.post(`/self-monitoring/enterprise/${enterpriseId}/organized-gas/batch`, items),
+  
+  // 获取无组织废气检测记录
+  getUnorganizedGasBatch: (enterpriseId) =>
+    request.get(`/self-monitoring/enterprise/${enterpriseId}/unorganized-gas/batch`),
+  
+  // 批量保存无组织废气检测记录
+  batchSaveUnorganizedGas: (enterpriseId, items) =>
+    request.post(`/self-monitoring/enterprise/${enterpriseId}/unorganized-gas/batch`, items),
+  
+  // 获取废水排放监测记录
+  getWastewaterBatch: (enterpriseId) =>
+    request.get(`/self-monitoring/enterprise/${enterpriseId}/wastewater/batch`),
+  
+  // 批量保存废水排放监测记录
+  batchSaveWastewater: (enterpriseId, items) =>
+    request.post(`/self-monitoring/enterprise/${enterpriseId}/wastewater/batch`, items),
+  
+  // 获取废气排放监测记录
+  getGasEmissionBatch: (enterpriseId) =>
+    request.get(`/self-monitoring/enterprise/${enterpriseId}/gas-emission/batch`),
+  
+  // 批量保存废气排放监测记录
+  batchSaveGasEmission: (enterpriseId, items) =>
+    request.post(`/self-monitoring/enterprise/${enterpriseId}/gas-emission/batch`, items),
+  
+  // 获取噪声监测记录
+  getNoiseBatch: (enterpriseId) =>
+    request.get(`/self-monitoring/enterprise/${enterpriseId}/noise/batch`),
+  
+  // 批量保存噪声监测记录
+  batchSaveNoise: (enterpriseId, items) =>
+    request.post(`/self-monitoring/enterprise/${enterpriseId}/noise/batch`, items),
+  
+  // 获取所有自行监测数据（保留旧接口）
   getAllData: (enterpriseId) => 
     request.get(`/self-monitoring/enterprise/${enterpriseId}/all-data`),
   
-  // 保存所有自行监测数据
+  // 保存所有自行监测数据（保留旧接口）
   saveAllData: (enterpriseId, data) => 
     request.post(`/self-monitoring/enterprise/${enterpriseId}/all-data`, data),
   
   // 删除所有自行监测数据
   deleteAllData: (enterpriseId) => 
     request.delete(`/self-monitoring/enterprise/${enterpriseId}/all-data`)
+}
+
+// PCB问题及清洁生产方案API
+export const pcbProblemSolutionApi = {
+  // 获取Ⅱ级及以下问题清单
+  getIssues: (enterpriseId) =>
+    request.get(`/pcb/problem-solution/enterprise/${enterpriseId}/issues`),
+  
+  // 暂存问题清单
+  saveIssues: (enterpriseId, items) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/issues`, items),
+  
+  // 获取权重计分配置
+  getScoringConfig: (enterpriseId) =>
+    request.get(`/pcb/problem-solution/enterprise/${enterpriseId}/scoring-config`),
+  
+  // 保存权重计分配置
+  saveScoringConfig: (enterpriseId, config) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/scoring-config`, config),
+  
+  // 获取无/低费方案列表
+  getLowCostSchemes: (enterpriseId) =>
+    request.get(`/pcb/problem-solution/enterprise/${enterpriseId}/low-cost-schemes`),
+  
+  // 批量保存无/低费方案
+  batchSaveLowCostSchemes: (enterpriseId, schemes) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/low-cost-schemes`, schemes),
+  
+  // 创建单个无/低费方案
+  createLowCostScheme: (enterpriseId, scheme) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/low-cost-schemes/single`, scheme),
+  
+  // 获取方案库无/低费方案（根据指标筛选）
+  getLibraryLowCostSchemes: (enterpriseId, indicatorIds = null) => {
+    let url = `/pcb/problem-solution/enterprise/${enterpriseId}/scheme-library/low-cost`
+    if (indicatorIds && indicatorIds.length > 0) {
+      // 对于列表参数，需要重复参数名
+      const params = indicatorIds.map(id => `indicator_ids=${id}`).join('&')
+      url += `?${params}`
+    }
+    return request.get(url)
+  },
+  
+  // 更新无/低费方案
+  updateLowCostScheme: (enterpriseId, schemeId, scheme) =>
+    request.put(`/pcb/problem-solution/enterprise/${enterpriseId}/low-cost-schemes/${schemeId}`, scheme),
+  
+  // 删除无/低费方案
+  deleteLowCostScheme: (enterpriseId, schemeId) =>
+    request.delete(`/pcb/problem-solution/enterprise/${enterpriseId}/low-cost-schemes/${schemeId}`),
+  
+  // 从方案库导入无/低费方案（根据方案ID列表）
+  importLowCostSchemes: (enterpriseId, schemeIds) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/low-cost-schemes/import`, schemeIds),
+  
+  // 获取中/高费方案列表
+  getMediumHighCostSchemes: (enterpriseId, costLevel = null) => {
+    const params = costLevel ? { params: { cost_level: costLevel } } : {}
+    return request.get(`/pcb/problem-solution/enterprise/${enterpriseId}/medium-high-cost-schemes`, params)
+  },
+  
+  // 批量保存中/高费方案
+  batchSaveMediumHighCostSchemes: (enterpriseId, schemes) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/medium-high-cost-schemes`, schemes),
+  
+  // 创建单个中/高费方案
+  createMediumHighCostScheme: (enterpriseId, scheme) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/medium-high-cost-schemes/single`, scheme),
+  
+  // 获取方案库中/高费方案（根据指标筛选）
+  getLibraryMediumHighCostSchemes: (enterpriseId, indicatorIds = null, costLevel = null) => {
+    let url = `/pcb/problem-solution/enterprise/${enterpriseId}/scheme-library/medium-high-cost`
+    const queryParams = []
+    if (indicatorIds && indicatorIds.length > 0) {
+      // 对于列表参数，需要重复参数名
+      indicatorIds.forEach(id => queryParams.push(`indicator_ids=${id}`))
+    }
+    if (costLevel) {
+      queryParams.push(`cost_level=${costLevel}`)
+    }
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join('&')}`
+    }
+    return request.get(url)
+  },
+  
+  // 更新中/高费方案
+  updateMediumHighCostScheme: (enterpriseId, schemeId, scheme) =>
+    request.put(`/pcb/problem-solution/enterprise/${enterpriseId}/medium-high-cost-schemes/${schemeId}`, scheme),
+  
+  // 删除中/高费方案
+  deleteMediumHighCostScheme: (enterpriseId, schemeId) =>
+    request.delete(`/pcb/problem-solution/enterprise/${enterpriseId}/medium-high-cost-schemes/${schemeId}`),
+  
+  // 从方案库导入中/高费方案（根据方案ID列表和费用等级）
+  importMediumHighCostSchemes: (enterpriseId, data) =>
+    request.post(`/pcb/problem-solution/enterprise/${enterpriseId}/medium-high-cost-schemes/import`, data)
 }
 
 // 统一的PCB API对象
@@ -415,10 +788,13 @@ export const pcbApi = {
   rawMaterial: rawMaterialApi,
   enterpriseRawMaterial: enterpriseRawMaterialApi,
   resourceConsumption: resourceConsumptionApi,
+  resourceUtilization: pcbResourceUtilizationApi,
+  auditOptions: pcbAuditOptionsApi,
   processEquipment: pcbProcessEquipmentApi,
   pollutionControl: pcbPollutionControlApi,
   solidWaste: pcbSolidWasteApi,
-  selfMonitoring: pcbSelfMonitoringApi
+  selfMonitoring: pcbSelfMonitoringApi,
+  problemSolution: pcbProblemSolutionApi
 }
 
 export default pcbApi

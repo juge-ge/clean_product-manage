@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """
 创建PCB筹划与组织相关的数据库表 - 简化版本
 """

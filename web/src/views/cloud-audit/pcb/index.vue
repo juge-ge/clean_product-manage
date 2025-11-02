@@ -108,6 +108,7 @@ import BasicInfo from './enterprise-detail/basic-info.vue'
 import Planning from './enterprise-detail/planning.vue'
 import PreAudit from './enterprise-detail/pre-audit.vue'
 import Audit from './enterprise-detail/audit.vue'
+import ProblemSolution from './enterprise-detail/problem-solution.vue'
 import SchemeLibrary from './enterprise-detail/scheme-library.vue'
 import Report from './enterprise-detail/report.vue'
 // import { mockApi } from '@/mock/pcb'
@@ -133,6 +134,7 @@ const auditSteps = [
   { title: '筹划与组织', description: '审核团队组建', key: 'planning' },
   { title: '预审核', description: '数据填报评估', key: 'pre-audit' },
   { title: '审核', description: '指标审核', key: 'audit' },
+  { title: '问题及清洁生产方案', description: '问题梳理与方案匹配', key: 'problem-solution' },
   { title: '方案库', description: '整改方案', key: 'scheme-library' },
   { title: '审核报告', description: '报告生成', key: 'report' }
 ]
@@ -209,6 +211,7 @@ const getCurrentComponent = () => {
     'planning': Planning,
     'pre-audit': PreAudit,
     'audit': Audit,
+    'problem-solution': ProblemSolution,
     'scheme-library': SchemeLibrary,
     'report': Report
   }
@@ -222,6 +225,7 @@ const getStepIcon = (index) => {
     'carbon:user-multiple',
     'carbon:search',
     'carbon:checkmark-filled',
+    'carbon:lightbulb',
     'carbon:library',
     'carbon:document-text'
   ]

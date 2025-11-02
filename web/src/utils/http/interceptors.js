@@ -19,7 +19,14 @@ export function reqResolve(config) {
   // 兜底：JSON写请求若未显式设置Content-Type，自动补全
   const method = (config.method || 'get').toLowerCase()
   const isWrite = method === 'post' || method === 'put' || method === 'patch'
-  if (isWrite && !config.headers['Content-Type'] && !config.headers['content-type']) {
+  // 若为 FormData，允许浏览器自动设置 multipart 边界；仅在非 FormData 且未显式设置时兜底为 application/json
+  const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+  if (
+    isWrite &&
+    !isFormData &&
+    !config.headers['Content-Type'] &&
+    !config.headers['content-type']
+  ) {
     config.headers['Content-Type'] = 'application/json'
   }
   
@@ -44,14 +51,18 @@ export function resResolve(response) {
     return Promise.resolve(response)
   }
 
-  // 处理业务状态码
-  if (data.code !== 200) {
-    const code = data.code
-    const message = resolveResError(code, data.msg)
-    window.$message?.error(message)
-    return Promise.reject({ code, message, data })
+  // 仅当返回体含有 code 字段时，才按业务码校验；否则直接透传
+  if (Object.prototype.hasOwnProperty.call(data, 'code')) {
+    if (data.code !== 200) {
+      const code = data.code
+      const message = resolveResError(code, data.msg)
+      window.$message?.error(message)
+      return Promise.reject({ code, message, data })
+    }
+    return Promise.resolve(data)
   }
 
+  // 无业务code结构的接口，直接返回原始data
   return Promise.resolve(data)
 }
 

@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field
 
 class PCBWaterConsumptionRecordBase(BaseModel):
     """用水消耗记录基础模式"""
-    project: str = Field(..., description="项目名称", max_length=100)
+    project: str = Field(..., description="项目名称（生产用水/生活用水）", max_length=100)
+    workshop: Optional[str] = Field(None, description="使用车间", max_length=200)
     unit: str = Field(..., description="单位", max_length=20)
     
     # 年份数据
@@ -66,7 +67,8 @@ class PCBWaterConsumptionRecordResponse(PCBWaterConsumptionRecordBase):
 
 class PCBElectricityConsumptionRecordBase(BaseModel):
     """用电消耗记录基础模式"""
-    project: str = Field(..., description="项目名称", max_length=100)
+    project: str = Field(..., description="项目名称（生产用电/非直接生产用电）", max_length=100)
+    workshop: Optional[str] = Field(None, description="使用车间", max_length=200)
     unit: str = Field(..., description="单位", max_length=20)
     
     # 年份数据 - 支持年份范围选择
@@ -120,7 +122,8 @@ class PCBElectricityConsumptionRecordResponse(PCBElectricityConsumptionRecordBas
 
 class PCBGasConsumptionRecordBase(BaseModel):
     """天然气消耗记录基础模式"""
-    project: str = Field(..., description="项目名称", max_length=100)
+    project: str = Field(..., description="项目名称（生产用气/非直接生产用气）", max_length=100)
+    workshop: Optional[str] = Field(None, description="使用车间", max_length=200)
     unit: str = Field(..., description="单位", max_length=20)
     
     # 年份数据
@@ -279,3 +282,56 @@ class PCBResourceConsumptionSaveResponse(BaseModel):
     success: bool = Field(True, description="保存是否成功")
     message: str = Field("保存成功", description="响应消息")
     data: Optional[Dict[str, Any]] = Field(None, description="保存的数据")
+
+
+# ==================== 三年数据相关Schema（用于前端交互）====================
+
+class PCBWaterConsumptionThreeYearsItem(BaseModel):
+    """近三年用水消耗项Schema - 支持前端camelCase字段名"""
+    project: str = Field(..., description="项目名称（生产用水/生活用水）")
+    workshop: Optional[str] = Field(None, description="使用车间")
+    unit: str = Field(..., description="单位")
+    # 动态年份字段，如 amount_2022, amount_2023, amount_2024
+    # 使用 extra 允许额外字段
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
+
+
+class PCBWaterConsumptionThreeYearsRequest(BaseModel):
+    """近三年用水消耗请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBWaterConsumptionThreeYearsItem] = Field(default_factory=list, description="用水记录列表")
+
+
+class PCBElectricityConsumptionThreeYearsItem(BaseModel):
+    """近三年用电消耗项Schema - 支持前端camelCase字段名"""
+    project: str = Field(..., description="项目名称（生产用电/非直接生产用电）")
+    workshop: Optional[str] = Field(None, description="使用车间")
+    unit: str = Field(..., description="单位")
+    # 动态年份字段，如 amount_2022, amount_2023, amount_2024
+    # 使用 extra 允许额外字段
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
+
+
+class PCBElectricityConsumptionThreeYearsRequest(BaseModel):
+    """近三年用电消耗请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBElectricityConsumptionThreeYearsItem] = Field(default_factory=list, description="用电记录列表")
+
+
+class PCBGasConsumptionThreeYearsItem(BaseModel):
+    """近三年天然气消耗项Schema - 支持前端camelCase字段名"""
+    project: str = Field(..., description="项目名称（生产用气/非直接生产用气）")
+    workshop: Optional[str] = Field(None, description="使用车间")
+    unit: str = Field(..., description="单位")
+    # 动态年份字段，如 amount_2022, amount_2023, amount_2024
+    # 使用 extra 允许额外字段
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
+
+
+class PCBGasConsumptionThreeYearsRequest(BaseModel):
+    """近三年天然气消耗请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBGasConsumptionThreeYearsItem] = Field(default_factory=list, description="天然气记录列表")

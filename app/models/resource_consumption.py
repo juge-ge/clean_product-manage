@@ -11,15 +11,16 @@ class PCBWaterConsumptionRecord(BaseModel, TimestampMixin):
     enterprise_id = fields.BigIntField(description="企业ID", index=True)
     
     # 基本信息
-    project = fields.CharField(max_length=100, description="项目名称", index=True)
+    project = fields.CharField(max_length=100, description="项目名称（生产用水/生活用水）", index=True)
+    workshop = fields.CharField(max_length=200, null=True, description="使用车间", index=True)
     unit = fields.CharField(max_length=20, description="单位")
     
     # 年份数据 - 支持年份范围选择
-    amount_2020 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2020年用量")
-    amount_2021 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2021年用量")
-    amount_2022 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2022年用量")
-    amount_2023 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2023年用量")
-    amount_2024 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2024年用量")
+    amount_2020 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2020年用量")
+    amount_2021 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2021年用量")
+    amount_2022 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2022年用量")
+    amount_2023 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2023年用量")
+    amount_2024 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2024年用量")
     
     # 其他信息
     water_type = fields.CharField(max_length=50, null=True, description="用水类型")
@@ -35,15 +36,16 @@ class PCBElectricityConsumptionRecord(BaseModel, TimestampMixin):
     enterprise_id = fields.BigIntField(description="企业ID", index=True)
     
     # 基本信息
-    project = fields.CharField(max_length=100, description="项目名称", index=True)
+    project = fields.CharField(max_length=100, description="项目名称（生产用电/非直接生产用电）", index=True)
+    workshop = fields.CharField(max_length=200, null=True, description="使用车间", index=True)
     unit = fields.CharField(max_length=20, description="单位")
     
     # 年份数据 - 支持年份范围选择
-    amount_2020 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2020年用量")
-    amount_2021 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2021年用量")
-    amount_2022 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2022年用量")
-    amount_2023 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2023年用量")
-    amount_2024 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2024年用量")
+    amount_2020 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2020年用量")
+    amount_2021 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2021年用量")
+    amount_2022 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2022年用量")
+    amount_2023 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2023年用量")
+    amount_2024 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2024年用量")
     
     # 其他信息
     electricity_type = fields.CharField(max_length=50, null=True, description="用电类型")
@@ -59,15 +61,16 @@ class PCBGasConsumptionRecord(BaseModel, TimestampMixin):
     enterprise_id = fields.BigIntField(description="企业ID", index=True)
     
     # 基本信息
-    project = fields.CharField(max_length=100, description="项目名称", index=True)
+    project = fields.CharField(max_length=100, description="项目名称（生产用气/非直接生产用气）", index=True)
+    workshop = fields.CharField(max_length=200, null=True, description="使用车间", index=True)
     unit = fields.CharField(max_length=20, description="单位")
     
     # 年份数据 - 支持年份范围选择
-    amount_2020 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2020年用量")
-    amount_2021 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2021年用量")
-    amount_2022 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2022年用量")
-    amount_2023 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2023年用量")
-    amount_2024 = fields.DecimalField(max_digits=15, decimal_places=2, null=True, description="2024年用量")
+    amount_2020 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2020年用量")
+    amount_2021 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2021年用量")
+    amount_2022 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2022年用量")
+    amount_2023 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2023年用量")
+    amount_2024 = fields.DecimalField(max_digits=15, decimal_places=4, null=True, description="2024年用量")
     
     # 其他信息
     gas_type = fields.CharField(max_length=50, null=True, description="燃气类型")

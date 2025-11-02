@@ -13,19 +13,20 @@ class PCBOrganizedGasMonitoring(BaseModel, TimestampMixin):
     monitoring_point = fields.CharField(max_length=100, description="监测点位", index=True)
     monitoring_time = fields.CharField(max_length=50, description="监测时间")
     
-    # 监测项目及化验结果
-    nitrogen_oxides = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="氮氧化物")
-    hydrogen_chloride = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="氯化氢")
-    hydrogen_cyanide = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="氰化氢")
-    sulfuric_acid_mist = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="硫酸雾")
-    chromic_acid_mist = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="铬酸雾")
-    fluoride = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="氟化物")
-    phenol = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="酚类")
-    non_methane_hydrocarbons = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="非甲烷总烃")
-    benzene = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="苯")
-    toluene = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="甲苯")
-    xylene = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="二甲苯")
-    toluene_xylene_total = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="甲苯与二甲苯合计")
+    # 监测项目及化验结果（支持ND值，使用字符串类型）
+    nitrogen_oxides = fields.CharField(max_length=50, null=True, description="氮氧化物（支持ND）")
+    hydrogen_chloride = fields.CharField(max_length=50, null=True, description="氯化氢（支持ND）")
+    hydrogen_cyanide = fields.CharField(max_length=50, null=True, description="氰化氢（支持ND）")
+    sulfuric_acid_mist = fields.CharField(max_length=50, null=True, description="硫酸雾（支持ND）")
+    chromic_acid_mist = fields.CharField(max_length=50, null=True, description="铬酸雾（支持ND）")
+    fluoride = fields.CharField(max_length=50, null=True, description="氟化物（支持ND）")
+    phenol = fields.CharField(max_length=50, null=True, description="酚类（支持ND）")
+    non_methane_hydrocarbons = fields.CharField(max_length=50, null=True, description="非甲烷总烃（支持ND）")
+    benzene = fields.CharField(max_length=50, null=True, description="苯（支持ND）")
+    toluene = fields.CharField(max_length=50, null=True, description="甲苯（支持ND）")
+    xylene = fields.CharField(max_length=50, null=True, description="二甲苯（支持ND）")
+    toluene_xylene_total = fields.CharField(max_length=50, null=True, description="甲苯与二甲苯合计（支持ND）")
+    vocs = fields.CharField(max_length=50, null=True, description="VOCs（支持ND）")
     
     # 其他信息
     remark = fields.TextField(null=True, description="备注")
@@ -42,7 +43,7 @@ class PCBUnorganizedGasMonitoring(BaseModel, TimestampMixin):
     sampling_time = fields.CharField(max_length=50, description="采样时间")
     sampling_point = fields.CharField(max_length=100, description="采样点位", index=True)
     monitoring_factor = fields.CharField(max_length=50, description="监测因子", index=True)
-    emission_concentration = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="排放浓度（mg/m³）")
+    emission_concentration = fields.CharField(max_length=50, null=True, description="排放浓度（mg/m³，支持ND）")
     emission_limit = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="排放浓度限值（mg/m³）")
     compliance = fields.CharField(max_length=20, description="达标情况")
     
@@ -59,6 +60,7 @@ class PCBWastewaterMonitoring(BaseModel, TimestampMixin):
     
     # 基本信息
     sampling_date = fields.CharField(max_length=50, description="采样日期")
+    monitoring_point = fields.CharField(max_length=100, default="", description="监测地点")
     
     # 检测结果（单位：mg/L）
     ph = fields.DecimalField(max_digits=5, decimal_places=2, null=True, description="pH")
@@ -68,6 +70,8 @@ class PCBWastewaterMonitoring(BaseModel, TimestampMixin):
     total_nitrogen = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="总氮")
     total_cyanide = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="总氰化物")
     total_copper = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="总铜")
+    nickel = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="镍")
+    nickel_outlet = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="镍（镍排口）")
     
     # 其他信息
     remark = fields.TextField(null=True, description="备注")
@@ -83,7 +87,9 @@ class PCBGasEmissionMonitoring(BaseModel, TimestampMixin):
     # 基本信息
     detection_point = fields.CharField(max_length=100, description="检测点位", index=True)
     detection_item = fields.CharField(max_length=100, description="检测项目")
-    detection_result = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="检测结果")
+    emission_rate = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="排放速率（kg/h）")
+    benchmark_flow = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="标杆流量（m³/h）")
+    detection_result = fields.CharField(max_length=50, null=True, description="检测结果（支持ND）")
     permitted_emission_limit = fields.DecimalField(max_digits=10, decimal_places=2, null=True, description="许可排放浓度限值")
     stack_height = fields.DecimalField(max_digits=8, decimal_places=1, null=True, description="排气筒高（m）")
     

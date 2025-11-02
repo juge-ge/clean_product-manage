@@ -63,7 +63,7 @@ async def update_leadership_team_member(
     member: PCBLeadershipTeamUpdate
 ):
     """更新领导小组成员"""
-    updated_member = await pcb_leadership_team_controller.update(id=member_id, obj=member)
+    updated_member = await pcb_leadership_team_controller.update(id=member_id, obj_in=member)
     if not updated_member:
         raise HTTPException(status_code=404, detail="成员不存在")
     return Success(data=await updated_member.to_dict(), msg="成员信息更新成功")
@@ -105,7 +105,7 @@ async def update_work_team_member(
     member: PCBWorkTeamUpdate
 ):
     """更新工作小组成员"""
-    updated_member = await pcb_work_team_controller.update(id=member_id, obj=member)
+    updated_member = await pcb_work_team_controller.update(id=member_id, obj_in=member)
     if not updated_member:
         raise HTTPException(status_code=404, detail="成员不存在")
     return Success(data=await updated_member.to_dict(), msg="成员信息更新成功")
@@ -265,7 +265,7 @@ async def update_training_record(
     record: PCBTrainingRecordUpdate
 ):
     """更新培训记录"""
-    updated_record = await pcb_training_record_controller.update(id=record_id, obj=record)
+    updated_record = await pcb_training_record_controller.update(id=record_id, obj_in=record)
     if not updated_record:
         raise HTTPException(status_code=404, detail="培训记录不存在")
     

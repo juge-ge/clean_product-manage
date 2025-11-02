@@ -2,7 +2,7 @@
 PCB行业清洁生产审核模块API路由
 提供企业、指标、审核结果、方案的RESTful API接口
 """
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
@@ -108,7 +108,7 @@ async def get_enterprise_detail(enterprise_id: int):
 @pcb_router.put("/enterprise/{enterprise_id}", summary="更新企业信息")
 async def update_enterprise(enterprise_id: int, enterprise: PCBEnterpriseUpdate):
     """更新企业基本信息"""
-    updated_enterprise = await pcb_enterprise_controller.update(id=enterprise_id, obj=enterprise)
+    updated_enterprise = await pcb_enterprise_controller.update(id=enterprise_id, obj_in=enterprise)
     if not updated_enterprise:
         raise HTTPException(status_code=404, detail="企业不存在")
 
@@ -191,7 +191,7 @@ async def update_indicator(indicator_id: int, indicator: PCBIndicatorUpdate):
     if not existing_indicator:
         raise HTTPException(status_code=404, detail="指标不存在")
 
-    updated_indicator = await pcb_indicator_controller.update(id=existing_indicator.id, obj=indicator)
+    updated_indicator = await pcb_indicator_controller.update(id=existing_indicator.id, obj_in=indicator)
     return Success(data=await updated_indicator.to_dict(), msg="指标更新成功")
 
 
@@ -258,15 +258,19 @@ async def get_audit_results(enterprise_id: int):
 
         if result:
             result_dict = await result.to_dict()
+            # 为了兼容前端使用remark字段，同时提供comment字段
+            if 'comment' in result_dict and 'remark' not in result_dict:
+                result_dict['remark'] = result_dict['comment']
         else:
             # 如果没有结果，创建默认结果
             result_dict = {
                 "enterprise_id": enterprise_id,
                 "indicator_id": indicator.id,
                 "current_value": None,
-                "level": "待评估",
+                "level": None,  # 初始为null而不是"待评估"
                 "score": 0,
                 "comment": None,
+                "remark": None,  # 同时提供remark字段
                 "manual_override": False,
             }
 
@@ -274,9 +278,9 @@ async def get_audit_results(enterprise_id: int):
         indicator_dict = await indicator.to_dict()
         result_dict["indicator"] = indicator_dict
 
-        # 获取推荐方案
-        recommended_schemes = await pcb_audit_result_controller.get_indicator_recommended_schemes(enterprise_id, indicator.id)
-        result_dict["recommended_schemes"] = recommended_schemes
+        # 移除推荐方案 - 不再返回推荐方案数据
+        # recommended_schemes = await pcb_audit_result_controller.get_indicator_recommended_schemes(enterprise_id, indicator.id)
+        # result_dict["recommended_schemes"] = recommended_schemes
 
         data.append(result_dict)
 
@@ -301,6 +305,7 @@ async def update_indicator_audit(
     if update_data.level:
         score = calculate_score(update_data.level)
 
+    # 移除方案选择 - 不再处理selected_scheme_ids
     result = await pcb_audit_result_controller.update_indicator_level(
         enterprise_id=enterprise_id,
         indicator_id=indicator_id,
@@ -308,7 +313,7 @@ async def update_indicator_audit(
         score=score,
         manual_override=update_data.manual_override or False,
         override_reason=update_data.override_reason,
-        selected_scheme_ids=update_data.selected_scheme_ids,
+        selected_scheme_ids=None,  # 不再处理方案选择
     )
 
     return Success(data=await result.to_dict(), msg="审核结果更新成功")
@@ -316,34 +321,87 @@ async def update_indicator_audit(
 
 @pcb_router.post("/enterprise/{enterprise_id}/audit/batch", summary="批量更新审核结果")
 async def batch_update_audit_results(enterprise_id: int, audit_data: dict):
-    """批量更新多个指标的审核结果，包含方案选择"""
-    # 提取指标审核结果和选定的方案
+    """批量更新多个指标的审核结果（已移除方案选择功能）"""
+    # 提取指标审核结果
     indicators = audit_data.get("indicators", [])
-    selected_schemes = audit_data.get("selected_schemes", [])
+    user_input_outputs = audit_data.get("user_input_outputs", {})  # 用户输入的产量数据
     auditor_name = audit_data.get("auditor_name", "系统")
     audit_date = audit_data.get("audit_date")
+    
+    # 移除方案选择处理
+    # selected_schemes = audit_data.get("selected_schemes", [])
     
     # 更新审核结果
     results = await pcb_audit_result_controller.batch_update_results(
         enterprise_id=enterprise_id, results_data=indicators
     )
     
-    # 保存选定的方案
-    if selected_schemes:
-        await pcb_enterprise_scheme_controller.save_selected_schemes(
-            enterprise_id=enterprise_id, selected_schemes=selected_schemes
-        )
+    # 移除方案保存逻辑
+    # # 保存选定的方案
+    # if selected_schemes:
+    #     await pcb_enterprise_scheme_controller.save_selected_schemes(
+    #         enterprise_id=enterprise_id, selected_schemes=selected_schemes
+    #     )
+    
+    # 获取产品产量数据并合并用户输入的产量
+    from app.controllers.pcb_production import PCBProductionDataController
+    production_controller = PCBProductionDataController()
+    
+    product_outputs = {}
+    try:
+        production_data = await production_controller.get_all_production_data(enterprise_id)
+        # 从产品数据中映射
+        product_outputs = _map_product_output_to_indicators(production_data.get("productOutput", []))
+    except Exception as e:
+        print(f"获取产品产量数据失败: {e}")
+        product_outputs = {}
+    
+    # 合并用户输入的产量（用户输入优先）
+    for indicator_id, output_value in user_input_outputs.items():
+        product_outputs[int(indicator_id)] = float(output_value)
     
     # 计算汇总数据
-    summary = await pcb_audit_result_controller.calculate_summary(enterprise_id)
+    summary = await pcb_audit_result_controller.calculate_summary(enterprise_id, product_outputs)
     
     return Success(data=summary, msg="审核结果批量更新成功")
 
 
 @pcb_router.get("/enterprise/{enterprise_id}/audit/summary", summary="获取审核汇总")
-async def get_audit_summary(enterprise_id: int):
-    """获取企业审核汇总数据"""
-    summary = await pcb_audit_result_controller.calculate_summary(enterprise_id)
+async def get_audit_summary(
+    enterprise_id: int,
+    user_input_outputs: Optional[str] = Query(None, description="用户输入的产量数据(JSON格式)")
+):
+    """
+    获取企业审核汇总数据（使用新的综合评价指数计算方法）
+    
+    参数:
+        enterprise_id: 企业ID
+        user_input_outputs: 可选的用户输入产量数据（JSON字符串格式，如：{"7": 500, "8": 1000}）
+    """
+    # 获取产品产量数据
+    from app.controllers.pcb_production import PCBProductionDataController
+    production_controller = PCBProductionDataController()
+    
+    product_outputs = {}
+    try:
+        production_data = await production_controller.get_all_production_data(enterprise_id)
+        # 将产品产量数据转换为indicator_id到产量的映射
+        product_outputs = _map_product_output_to_indicators(production_data.get("productOutput", []))
+    except Exception as e:
+        print(f"获取产品产量数据失败: {e}")
+        product_outputs = {}
+    
+    # 解析并合并用户输入的产量（如果提供）
+    if user_input_outputs:
+        try:
+            import json
+            user_outputs = json.loads(user_input_outputs)
+            for indicator_id, output_value in user_outputs.items():
+                product_outputs[int(indicator_id)] = float(output_value)
+        except Exception as e:
+            print(f"解析用户输入产量数据失败: {e}")
+    
+    summary = await pcb_audit_result_controller.calculate_summary(enterprise_id, product_outputs)
     return Success(data=summary)
 
 
@@ -459,7 +517,7 @@ async def update_scheme(scheme_id: int, scheme: PCBSchemeUpdate):
     if not existing_scheme:
         raise HTTPException(status_code=404, detail="方案不存在")
 
-    updated_scheme = await pcb_scheme_controller.update(id=existing_scheme.id, obj=scheme)
+    updated_scheme = await pcb_scheme_controller.update(id=existing_scheme.id, obj_in=scheme)
     return Success(data=await updated_scheme.to_dict(), msg="方案更新成功")
 
 
@@ -582,7 +640,7 @@ async def update_enterprise_scheme(
     if not es:
         raise HTTPException(status_code=404, detail="企业方案记录不存在")
 
-    updated_es = await pcb_enterprise_scheme_controller.update(id=es.id, obj=update_data)
+    updated_es = await pcb_enterprise_scheme_controller.update(id=es.id, obj_in=update_data)
     return Success(data=await updated_es.to_dict(), msg="企业方案更新成功")
 
 
@@ -598,17 +656,19 @@ async def get_audit_report(enterprise_id: int):
     return Success(data=await report.to_dict())
 
 
-@pcb_router.post("/enterprise/{enterprise_id}/report/generate", summary="生成审核报告")
-async def generate_audit_report(
-    enterprise_id: int,
-    auditor_id: int = Query(..., description="审核人ID"),
-    auditor_name: str = Query(..., description="审核人姓名"),
-):
-    """生成或更新审核报告"""
-    report = await pcb_audit_report_controller.generate_report(
-        enterprise_id=enterprise_id, auditor_id=auditor_id, auditor_name=auditor_name
-    )
-    return Success(data=await report.to_dict(), msg="审核报告生成成功")
+# 注意：此路由已迁移到 app/api/v1/pcb_report.py
+# 新的路由支持更完整的Word报告生成功能，包括企业信息、筹划与组织、预审核、审核、问题及清洁生产方案等模块
+# @pcb_router.post("/enterprise/{enterprise_id}/report/generate", summary="生成审核报告")
+# async def generate_audit_report(
+#     enterprise_id: int,
+#     auditor_id: int = Query(..., description="审核人ID"),
+#     auditor_name: str = Query(..., description="审核人姓名"),
+# ):
+#     """生成或更新审核报告"""
+#     report = await pcb_audit_report_controller.generate_report(
+#         enterprise_id=enterprise_id, auditor_id=auditor_id, auditor_name=auditor_name
+#     )
+#     return Success(data=await report.to_dict(), msg="审核报告生成成功")
 
 
 @pcb_router.post("/enterprise/{enterprise_id}/report/submit", summary="提交审核报告")
@@ -676,6 +736,97 @@ def calculate_score(level: str) -> float:
         "不达标": 0.0,
     }
     return score_map.get(level, 0.0)
+
+
+def _map_product_output_to_indicators(product_outputs: List[Dict]) -> Dict[int, float]:
+    """
+    将产品产量数据映射到指标ID
+    
+    参数:
+        product_outputs: 产品产量列表，格式: [
+            {type: 'rigid', mainProduct: '单面板', output: 500, ...},
+            ...
+        ]
+    
+    返回:
+        {indicator_id: total_output} 的字典
+    """
+    # 指标ID到产品类型的映射（与前端保持一致）
+    indicator_product_map = {
+        # 刚性单面板
+        7: {'type': 'rigid', 'mainProduct': '单面板', 'layers': 1},
+        15: {'type': 'rigid', 'mainProduct': '单面板', 'layers': 1},
+        20: {'type': 'rigid', 'mainProduct': '单面板', 'layers': 1},
+        30: {'type': 'rigid', 'mainProduct': '单面板', 'layers': 1},
+        34: {'type': 'rigid', 'mainProduct': '单面板', 'layers': 1},
+        38: {'type': 'rigid', 'mainProduct': '单面板', 'layers': 1},
+        # 刚性双面板
+        8: {'type': 'rigid', 'mainProduct': '双面板', 'layers': 2},
+        16: {'type': 'rigid', 'mainProduct': '双面板', 'layers': 2},
+        21: {'type': 'rigid', 'mainProduct': '双面板', 'layers': 2},
+        31: {'type': 'rigid', 'mainProduct': '双面板', 'layers': 2},
+        35: {'type': 'rigid', 'mainProduct': '双面板', 'layers': 2},
+        39: {'type': 'rigid', 'mainProduct': '双面板', 'layers': 2},
+        # 刚性多层板
+        9: {'type': 'rigid', 'mainProduct': '多层板', 'layers': None},
+        17: {'type': 'rigid', 'mainProduct': '多层板', 'layers': None},
+        22: {'type': 'rigid', 'mainProduct': '多层板', 'layers': None},
+        32: {'type': 'rigid', 'mainProduct': '多层板', 'layers': None},
+        36: {'type': 'rigid', 'mainProduct': '多层板', 'layers': None},
+        40: {'type': 'rigid', 'mainProduct': '多层板', 'layers': None},
+        # 刚性HDI板
+        10: {'type': 'rigid', 'mainProduct': 'HDI板', 'layers': None},
+        18: {'type': 'rigid', 'mainProduct': 'HDI板', 'layers': None},
+        23: {'type': 'rigid', 'mainProduct': 'HDI板', 'layers': None},
+        33: {'type': 'rigid', 'mainProduct': 'HDI板', 'layers': None},
+        37: {'type': 'rigid', 'mainProduct': 'HDI板', 'layers': None},
+        41: {'type': 'rigid', 'mainProduct': 'HDI板', 'layers': None},
+        # 挠性单面板
+        11: {'type': 'flexible', 'mainProduct': '单面板', 'layers': 1},
+        24: {'type': 'flexible', 'mainProduct': '单面板', 'layers': 1},
+        # 挠性双面板
+        12: {'type': 'flexible', 'mainProduct': '双面板', 'layers': 2},
+        25: {'type': 'flexible', 'mainProduct': '双面板', 'layers': 2},
+        # 挠性多层板
+        13: {'type': 'flexible', 'mainProduct': '多层板', 'layers': None},
+        26: {'type': 'flexible', 'mainProduct': '多层板', 'layers': None},
+        # 挠性HDI板
+        14: {'type': 'flexible', 'mainProduct': 'HDI板', 'layers': None},
+        27: {'type': 'flexible', 'mainProduct': 'HDI板', 'layers': None},
+    }
+    
+    result = {}
+    
+    for indicator_id, product_info in indicator_product_map.items():
+        total_output = 0.0
+        
+        # 查找匹配的产品产量数据
+        for product in product_outputs:
+            if (product.get('type') == product_info['type'] and 
+                product.get('mainProduct') == product_info['mainProduct']):
+                
+                # 如果指定了层数，需要匹配层数
+                if product_info['layers'] is not None:
+                    if product.get('layers') != product_info['layers']:
+                        continue
+                
+                # 累加产量（处理年份字段）
+                output_value = product.get('output')
+                if output_value:
+                    total_output += float(output_value)
+                
+                # 如果是年份字段格式（output_2023等）
+                for key, value in product.items():
+                    if key.startswith('output_') and value:
+                        try:
+                            total_output += float(value)
+                        except (ValueError, TypeError):
+                            pass
+        
+        if total_output > 0:
+            result[indicator_id] = total_output
+    
+    return result
 
 
 # ==================== Enterprise Raw Material Usage APIs ====================

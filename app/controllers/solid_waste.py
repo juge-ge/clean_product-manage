@@ -20,6 +20,44 @@ class PCBSolidWasteRecordController(CRUDBase[PCBSolidWasteRecord, PCBSolidWasteR
     async def get_by_enterprise(self, enterprise_id: int) -> List[PCBSolidWasteRecord]:
         """获取企业的所有固体废物记录"""
         return await self.model.filter(enterprise_id=enterprise_id).order_by('category', 'name')
+    
+    async def batch_upsert(self, enterprise_id: int, items: List[Dict]) -> List[PCBSolidWasteRecord]:
+        """批量更新或插入固体废物记录 - 先删除后创建确保删除功能正常"""
+        # 先删除该企业的所有固体废物记录，确保删除功能正常工作
+        await self.model.filter(enterprise_id=enterprise_id).delete()
+        
+        # 创建新记录
+        results = []
+        from decimal import Decimal
+        for item in items:
+            # 构建记录数据
+            record_data = {
+                "enterprise_id": enterprise_id,
+                "category": item.get("category") or "",
+                "name": item.get("name") or "",
+                "unit": item.get("unit") or "",
+                "disposal_method": item.get("disposal_method")
+            }
+            
+            # 添加年份数据
+            for year in range(2020, 2025):
+                year_key = f"amount_{year}"
+                if year_key in item:
+                    value = item[year_key]
+                    # 确保0值被正确处理
+                    if value is None or value == "":
+                        record_data[year_key] = None
+                    else:
+                        record_data[year_key] = Decimal(str(value))
+            
+            # 验证必填字段
+            if not record_data["category"] or not record_data["name"] or not record_data["unit"]:
+                continue
+            
+            new_record = await self.model.create(**record_data)
+            results.append(new_record)
+        
+        return results
 
 
 class PCBSolidWasteCategoryController(CRUDBase[PCBSolidWasteCategory, PCBSolidWasteCategoryCreate, PCBSolidWasteCategoryUpdate]):

@@ -382,6 +382,23 @@
         <n-form-item label="培训地点" path="location">
           <n-input v-model:value="trainingForm.location" placeholder="请输入培训地点" />
         </n-form-item>
+        <n-form-item v-if="!editingTrainingId" label="培训图片">
+          <n-upload
+            :file-list="trainingUploadFileList"
+            accept="image/*"
+            :max="5"
+            list-type="image-card"
+            @change="handleTrainingModalUploadChange"
+            @remove="handleTrainingModalUploadRemove"
+          >
+            <n-button type="info" size="small">
+              <template #icon>
+                <TheIcon icon="carbon:camera" />
+              </template>
+              选择图片
+            </n-button>
+          </n-upload>
+        </n-form-item>
       </n-form>
       
       <template #footer>
@@ -462,6 +479,8 @@ const trainingForm = ref({
   instructor: '',
   location: ''
 })
+// 新增培训记录模态框内的上传文件列表
+const trainingUploadFileList = ref([])
 // 移除全局的meetingImages，改为每个培训记录独立的图片管理
 
 // 渲染函数定义
@@ -878,6 +897,16 @@ const saveTraining = async () => {
         formData.append('date', dateValue)
       }
       
+      // 追加选中的图片文件
+      if (trainingUploadFileList.value && trainingUploadFileList.value.length > 0) {
+        trainingUploadFileList.value.forEach(item => {
+          const file = item.file || item.raw || item
+          if (file instanceof File) {
+            formData.append('images', file)
+          }
+        })
+      }
+
       // 调试：检查FormData内容
       console.log('FormData contents:')
       for (let [key, value] of formData.entries()) {
@@ -891,6 +920,7 @@ const saveTraining = async () => {
     showAddTrainingModal.value = false
     editingTrainingId.value = null
     resetTrainingForm()
+    trainingUploadFileList.value = []
     await fetchTrainingRecords()
   } catch (error) {
     console.error('保存培训记录失败:', error)
@@ -1037,6 +1067,14 @@ const deleteTraining = async (id) => {
       message.error('删除失败')
     }
   }
+}
+
+// 新增培训记录模态框内上传事件
+const handleTrainingModalUploadChange = (options) => {
+  trainingUploadFileList.value = options.fileList || []
+}
+const handleTrainingModalUploadRemove = (options) => {
+  trainingUploadFileList.value = options.fileList || []
 }
 
 // 删除成员方法

@@ -83,17 +83,31 @@ class PCBWorkPlanController(CRUDBase[PCBWorkPlan, PCBWorkPlanCreate, PCBWorkPlan
         plan_dict["enterprise_id"] = enterprise_id
         return await self.model.create(**plan_dict)
 
-    async def update_plans(self, enterprise_id: int, plans_data: List[Dict]) -> List[PCBWorkPlan]:
+    async def update_plans(self, enterprise_id: int, plans_data: List) -> List[PCBWorkPlan]:
         """批量更新工作计划"""
+        from app.schemas.pcb_planning import PCBWorkPlanUpdate
+        
         updated_plans = []
         
         for plan_data in plans_data:
-            plan_id = plan_data.get("id")
+            # 如果是 Pydantic 模型，转换为字典；如果是字典，直接使用
+            if isinstance(plan_data, PCBWorkPlanUpdate):
+                plan_dict = plan_data.model_dump(exclude_unset=True)
+            elif isinstance(plan_data, dict):
+                plan_dict = plan_data
+            else:
+                # 如果是其他类型，尝试转换为字典
+                try:
+                    plan_dict = plan_data.model_dump(exclude_unset=True) if hasattr(plan_data, 'model_dump') else dict(plan_data)
+                except:
+                    plan_dict = dict(plan_data)
+            
+            plan_id = plan_dict.get("id")
             if plan_id:
                 # 更新现有计划
                 plan = await self.model.get_or_none(id=plan_id, enterprise_id=enterprise_id)
                 if plan:
-                    for key, value in plan_data.items():
+                    for key, value in plan_dict.items():
                         if key != "id" and value is not None:
                             setattr(plan, key, value)
                     plan.updated_at = datetime.now()
@@ -101,9 +115,9 @@ class PCBWorkPlanController(CRUDBase[PCBWorkPlan, PCBWorkPlanCreate, PCBWorkPlan
                     updated_plans.append(plan)
             else:
                 # 创建新计划
-                plan_dict = {k: v for k, v in plan_data.items() if k != "id"}
-                plan_dict["enterprise_id"] = enterprise_id
-                plan = await self.model.create(**plan_dict)
+                plan_dict_copy = {k: v for k, v in plan_dict.items() if k != "id"}
+                plan_dict_copy["enterprise_id"] = enterprise_id
+                plan = await self.model.create(**plan_dict_copy)
                 updated_plans.append(plan)
         
         return updated_plans

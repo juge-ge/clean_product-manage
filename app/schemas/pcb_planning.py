@@ -97,6 +97,7 @@ class PCBWorkPlanCreate(PCBWorkPlanBase):
 
 class PCBWorkPlanUpdate(BaseModel):
     """更新工作计划请求Schema"""
+    id: Optional[int] = Field(None, description="工作计划ID（用于更新现有记录）")
     stage_order: Optional[int] = Field(None, ge=1, le=10, description="阶段顺序")
     stage: Optional[str] = Field(None, description="阶段名称")
     work_content: Optional[str] = Field(None, description="工作内容")

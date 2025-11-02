@@ -28,13 +28,30 @@
           :row-key="row => row.id"
           :pagination="false"
           size="small"
+          :loading="loading"
         />
+      
+      <!-- 提交按钮 -->
+      <template #footer>
+        <div style="text-align: left; padding-top: 16px;">
+          <n-button 
+            type="primary" 
+            :loading="loading"
+            @click="submitSolidWasteData"
+          >
+            <template #icon>
+              <TheIcon icon="carbon:checkmark" />
+            </template>
+            提交
+          </n-button>
+        </div>
+      </template>
     </n-card>
   </div>
 </template>
 
 <script setup>
-import { computed, h, ref, watch } from 'vue'
+import { computed, h, ref, watch, onMounted } from 'vue'
 import { 
   NCard,
   NDataTable, 
@@ -43,9 +60,11 @@ import {
   NInputNumber, 
   NSelect,
   NSpace,
-  NText
+  NText,
+  useMessage
 } from 'naive-ui'
 import TheIcon from '@/components/icon/TheIcon.vue'
+import api from '@/api/pcb'
 
 const props = defineProps({
   modelValue: {
@@ -53,10 +72,16 @@ const props = defineProps({
     default: () => ({
       waste: []
     })
+  },
+  enterpriseId: {
+    type: Number,
+    required: true
   }
 })
 
 const emit = defineEmits(['update:modelValue'])
+const message = useMessage()
+const loading = ref(false)
 
 const formData = computed({
   get: () => props.modelValue,
@@ -161,7 +186,90 @@ const wasteColumns = computed(() => {
 // 年份范围变化处理
 const onYearRangeChange = (range) => {
   selectedYearRange.value = range
-  // 重新计算表格列
+  loadSolidWasteData()
+}
+
+// 加载固体废物数据
+const loadSolidWasteData = async () => {
+  if (!props.enterpriseId) {
+    return
+  }
+  
+  loading.value = true
+  try {
+    const response = await api.solidWaste.getThreeYearsSolidWaste(
+      props.enterpriseId,
+      selectedYearRange.value
+    )
+    
+    if (response.data && Array.isArray(response.data)) {
+      formData.value.waste = response.data.map(item => ({
+        id: item.id || Date.now() + Math.random(),
+        category: item.category || '',
+        name: item.name || '',
+        unit: item.unit || '吨',
+        disposal_method: item.disposal_method || null,
+        ...Object.fromEntries(
+          Object.entries(item).filter(([key]) => key.startsWith('amount_'))
+        )
+      }))
+    }
+  } catch (error) {
+    console.error('加载固体废物数据失败:', error)
+    message.error('加载固体废物数据失败: ' + (error.message || '未知错误'))
+  } finally {
+    loading.value = false
+  }
+}
+
+// 提交固体废物数据
+const submitSolidWasteData = async () => {
+  if (!props.enterpriseId) {
+    message.warning('企业ID不能为空')
+    return
+  }
+  
+  loading.value = true
+  try {
+    const items = formData.value.waste
+      .filter(row => row.category && row.name && row.unit)
+      .map(row => {
+        const item = {
+          category: row.category,
+          name: row.name,
+          unit: row.unit,
+          disposal_method: row.disposal_method || null
+        }
+        // 添加年份数据
+        const yearRange = selectedYearRange.value.split('-')
+        const startYear = parseInt(yearRange[0])
+        const endYear = parseInt(yearRange[1])
+        for (let year = startYear; year <= endYear; year++) {
+          const amount = row[`amount_${year}`]
+          if (amount !== null && amount !== undefined && amount !== '') {
+            item[`amount_${year}`] = amount
+          } else {
+            item[`amount_${year}`] = null
+          }
+        }
+        return item
+      })
+    
+    await api.solidWaste.saveThreeYearsSolidWaste(
+      props.enterpriseId,
+      selectedYearRange.value,
+      items
+    )
+    
+    message.success('固体废物数据提交成功')
+    await new Promise(resolve => setTimeout(resolve, 300))
+    await loadSolidWasteData()
+  } catch (error) {
+    console.error('提交固体废物数据失败:', error)
+    message.error('提交固体废物数据失败: ' + (error.message || '未知错误'))
+  } finally {
+    loading.value = false
+  }
 }
 
 // 添加废物行
@@ -190,16 +298,25 @@ const removeWasteRow = (index) => {
   formData.value.waste.splice(index, 1)
 }
 
+// 初始化加载数据
+onMounted(() => {
+  if (props.enterpriseId) {
+    loadSolidWasteData()
+  }
+})
+
+// 监听企业ID变化
+watch(() => props.enterpriseId, (newId) => {
+  if (newId) {
+    loadSolidWasteData()
+  }
+})
+
 // 确保数据结构完整
 watch(() => props.modelValue, (newVal) => {
   if (newVal) {
     if (!newVal.waste) {
       newVal.waste = []
-    }
-    
-    // 如果表格为空，添加一条空白记录
-    if (newVal.waste.length === 0) {
-      addWasteRow()
     }
   }
 }, { immediate: true, deep: true })

@@ -24,10 +24,11 @@
       
       <n-data-table
         :columns="getWaterColumns()"
-        :data="formData.water"
+        :data="waterTableData"
         :row-key="row => row.id"
         :pagination="false"
         size="small"
+        :loading="loadingWater"
       />
       
       <div class="water-actions mt-4">
@@ -66,10 +67,11 @@
       
       <n-data-table
         :columns="getElectricityColumns()"
-        :data="formData.electricity"
+        :data="electricityTableData"
         :row-key="row => row.id"
         :pagination="false"
         size="small"
+        :loading="loadingElectricity"
       />
       
       <div class="electricity-actions mt-4">
@@ -106,13 +108,14 @@
         </n-space>
       </template>
       
-          <n-data-table
-            :columns="getGasColumns()"
-            :data="formData.gas"
-            :row-key="row => row.id"
-            :pagination="false"
-            size="small"
-          />
+      <n-data-table
+        :columns="getGasColumns()"
+        :data="gasTableData"
+        :row-key="row => row.id"
+        :pagination="false"
+        size="small"
+        :loading="loadingGas"
+      />
       
       <div class="gas-actions mt-4">
         <n-space>
@@ -152,7 +155,7 @@ import {
   useMessage
 } from 'naive-ui'
 import TheIcon from '@/components/icon/TheIcon.vue'
-import { pcbApi } from '@/api/pcb'
+import api from '@/api'
 
 const props = defineProps({
   modelValue: {
@@ -192,11 +195,7 @@ const selectedGasYearRange = ref('2022-2024')
 // 用水相关选项
 const waterProjectOptions = [
   { label: '生产用水', value: '生产用水' },
-  { label: '生活用水', value: '生活用水' },
-  { label: '总用水量', value: '总用水量' },
-  { label: '办公用水', value: '办公用水' },
-  { label: '冷却用水', value: '冷却用水' },
-  { label: '清洗用水', value: '清洗用水' }
+  { label: '生活用水', value: '生活用水' }
 ]
 
 const waterUnitOptions = [
@@ -209,12 +208,8 @@ const waterUnitOptions = [
 
 // 用电相关选项
 const electricityProjectOptions = [
-  { label: '生产车间用电', value: '生产车间用电' },
-  { label: '辅助生产用电', value: '辅助生产用电' },
-  { label: '办公用电', value: '办公用电' },
-  { label: '生活用电', value: '生活用电' },
-  { label: '照明用电', value: '照明用电' },
-  { label: '空调用电', value: '空调用电' }
+  { label: '生产用电', value: '生产用电' },
+  { label: '非直接生产用电', value: '非直接生产用电' }
 ]
 
 const electricityUnitOptions = [
@@ -226,10 +221,8 @@ const electricityUnitOptions = [
 
 // 天然气相关选项
 const gasProjectOptions = [
-  { label: '锅炉天然气', value: '锅炉天然气' },
-  { label: '工业煤气', value: '工业煤气' },
-  { label: '生活用气', value: '生活用气' },
-  { label: '生产用气', value: '生产用气' }
+  { label: '生产用气', value: '生产用气' },
+  { label: '非直接生产用气', value: '非直接生产用气' }
 ]
 
 const gasUnitOptions = [
@@ -247,21 +240,37 @@ const getWaterColumns = () => {
       title: '项目', 
       key: 'project', 
       width: 150,
-      render: (row) => h(NSelect, {
-        value: row.project,
-        options: waterProjectOptions,
-        onUpdateValue: (value) => { row.project = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, row.project)
+        : h(NSelect, {
+            value: row.project,
+            options: waterProjectOptions,
+            onUpdateValue: (value) => { row.project = value }
+          })
+    },
+    {
+      title: '使用车间',
+      key: 'workshop',
+      width: 160,
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, '-')
+        : h(NInput, {
+            value: row.workshop,
+            placeholder: '请输入使用车间',
+            onUpdateValue: (value) => { row.workshop = value }
+          })
     },
     { 
       title: '单位', 
       key: 'unit', 
       width: 100,
-      render: (row) => h(NSelect, {
-        value: row.unit,
-        options: waterUnitOptions,
-        onUpdateValue: (value) => { row.unit = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, row.unit || '')
+        : h(NSelect, {
+            value: row.unit,
+            options: waterUnitOptions,
+            onUpdateValue: (value) => { row.unit = value }
+          })
     }
   ]
 
@@ -276,13 +285,15 @@ const getWaterColumns = () => {
       title: `${year}年用量`,
       key: `amount_${year}`,
       width: 120,
-      render: (row) => h(NInputNumber, {
-        value: row[`amount_${year}`],
-        min: 0,
-        precision: 2,
-        placeholder: '请输入用量',
-        onUpdateValue: (value) => { row[`amount_${year}`] = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, (Number(row[`amount_${year}`] || 0)).toFixed(2))
+        : h(NInputNumber, {
+            value: row[`amount_${year}`],
+            min: 0,
+            precision: 2,
+            placeholder: '请输入用量',
+            onUpdateValue: (value) => { row[`amount_${year}`] = value }
+          })
     })
   }
 
@@ -290,11 +301,13 @@ const getWaterColumns = () => {
     title: '操作',
     key: 'action',
     width: 80,
-    render: (row, index) => h(NButton, {
-      size: "small",
-      type: "error",
-      onClick: () => removeWaterRow(index)
-    }, () => '删除')
+    render: (row, index) => row.isTotal
+      ? null
+      : h(NButton, {
+          size: "small",
+          type: "error",
+          onClick: () => removeWaterRow(index)
+        }, () => '删除')
   }
 
   return [...baseColumns, ...yearColumns, actionColumn]
@@ -307,21 +320,37 @@ const getElectricityColumns = () => {
       title: '项目', 
       key: 'project', 
       width: 150,
-      render: (row) => h(NSelect, {
-        value: row.project,
-        options: electricityProjectOptions,
-        onUpdateValue: (value) => { row.project = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, row.project)
+        : h(NSelect, {
+            value: row.project,
+            options: electricityProjectOptions,
+            onUpdateValue: (value) => { row.project = value }
+          })
+    },
+    {
+      title: '使用车间',
+      key: 'workshop',
+      width: 160,
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, '-')
+        : h(NInput, {
+            value: row.workshop,
+            placeholder: '请输入使用车间',
+            onUpdateValue: (value) => { row.workshop = value }
+          })
     },
     { 
       title: '单位', 
       key: 'unit', 
       width: 100,
-      render: (row) => h(NSelect, {
-        value: row.unit,
-        options: electricityUnitOptions,
-        onUpdateValue: (value) => { row.unit = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, row.unit || '')
+        : h(NSelect, {
+            value: row.unit,
+            options: electricityUnitOptions,
+            onUpdateValue: (value) => { row.unit = value }
+          })
     }
   ]
 
@@ -336,13 +365,15 @@ const getElectricityColumns = () => {
       title: `${year}年用量`,
       key: `amount_${year}`,
       width: 120,
-      render: (row) => h(NInputNumber, {
-        value: row[`amount_${year}`],
-        min: 0,
-        precision: 2,
-        placeholder: '请输入用量',
-        onUpdateValue: (value) => { row[`amount_${year}`] = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, (Number(row[`amount_${year}`] || 0)).toFixed(2))
+        : h(NInputNumber, {
+            value: row[`amount_${year}`],
+            min: 0,
+            precision: 2,
+            placeholder: '请输入用量',
+            onUpdateValue: (value) => { row[`amount_${year}`] = value }
+          })
     })
   }
 
@@ -350,11 +381,13 @@ const getElectricityColumns = () => {
     title: '操作',
     key: 'action',
     width: 80,
-    render: (row, index) => h(NButton, {
-      size: "small",
-      type: "error",
-      onClick: () => removeElectricityRow(index)
-    }, () => '删除')
+    render: (row, index) => row.isTotal
+      ? null
+      : h(NButton, {
+          size: "small",
+          type: "error",
+          onClick: () => removeElectricityRow(index)
+        }, () => '删除')
   }
 
   return [...baseColumns, ...yearColumns, actionColumn]
@@ -367,21 +400,37 @@ const getGasColumns = () => {
       title: '项目', 
       key: 'project', 
       width: 150,
-    render: (row) => h(NSelect, {
-        value: row.project,
-        options: gasProjectOptions,
-        onUpdateValue: (value) => { row.project = value }
-    })
+    render: (row) => row.isTotal
+      ? h('span', { style: 'font-weight: 600' }, row.project)
+      : h(NSelect, {
+          value: row.project,
+          options: gasProjectOptions,
+          onUpdateValue: (value) => { row.project = value }
+      })
   },
+  {
+      title: '使用车间',
+      key: 'workshop',
+      width: 160,
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, '-')
+        : h(NInput, {
+            value: row.workshop,
+            placeholder: '请输入使用车间',
+            onUpdateValue: (value) => { row.workshop = value }
+          })
+    },
   { 
       title: '单位', 
       key: 'unit', 
       width: 100,
-      render: (row) => h(NSelect, {
-        value: row.unit,
-        options: gasUnitOptions,
-        onUpdateValue: (value) => { row.unit = value }
-      })
+      render: (row) => row.isTotal
+        ? h('span', { style: 'font-weight: 600' }, row.unit || '')
+        : h(NSelect, {
+            value: row.unit,
+            options: gasUnitOptions,
+            onUpdateValue: (value) => { row.unit = value }
+          })
     }
   ]
 
@@ -396,13 +445,15 @@ const getGasColumns = () => {
       title: `${year}年用量`,
       key: `amount_${year}`,
     width: 120,
-    render: (row) => h(NInputNumber, {
-        value: row[`amount_${year}`],
-      min: 0,
-      precision: 2,
-        placeholder: '请输入用量',
-        onUpdateValue: (value) => { row[`amount_${year}`] = value }
-      })
+    render: (row) => row.isTotal
+      ? h('span', { style: 'font-weight: 600' }, (Number(row[`amount_${year}`] || 0)).toFixed(2))
+      : h(NInputNumber, {
+          value: row[`amount_${year}`],
+        min: 0,
+        precision: 2,
+          placeholder: '请输入用量',
+          onUpdateValue: (value) => { row[`amount_${year}`] = value }
+        })
     })
   }
 
@@ -410,11 +461,13 @@ const getGasColumns = () => {
     title: '操作', 
     key: 'action', 
     width: 80,
-    render: (row, index) => h(NButton, {
-      size: "small",
-      type: "error",
-      onClick: () => removeGasRow(index)
-    }, () => '删除')
+    render: (row, index) => row.isTotal
+      ? null
+      : h(NButton, {
+          size: "small",
+          type: "error",
+          onClick: () => removeGasRow(index)
+        }, () => '删除')
   }
 
   return [...baseColumns, ...yearColumns, actionColumn]
@@ -422,19 +475,19 @@ const getGasColumns = () => {
 
 
 // 事件处理函数
-const onWaterYearRangeChange = (range) => {
+const onWaterYearRangeChange = async (range) => {
   selectedWaterYearRange.value = range
-  // 重新计算表格列
+  await loadWaterData()
 }
 
-const onElectricityYearRangeChange = (range) => {
+const onElectricityYearRangeChange = async (range) => {
   selectedElectricityYearRange.value = range
-  // 重新计算表格列
+  await loadElectricityData()
 }
 
-const onGasYearRangeChange = (range) => {
+const onGasYearRangeChange = async (range) => {
   selectedGasYearRange.value = range
-  // 重新计算表格列
+  await loadGasData()
 }
 
 // 用水相关操作
@@ -442,6 +495,7 @@ const addWaterRow = () => {
   const newRow = {
     id: Date.now(),
     project: '',
+    workshop: '',
     unit: 'm³'
   }
   
@@ -461,8 +515,49 @@ const removeWaterRow = (index) => {
   formData.value.water.splice(index, 1)
 }
 
-const submitWaterData = () => {
-  message.success('用水数据提交成功')
+const submitWaterData = async () => {
+  if (!props.enterpriseId) {
+    message.warning('企业ID不能为空')
+    return
+  }
+  
+  try {
+    const items = formData.value.water
+      .filter(row => !row.isTotal && row.project && row.unit)
+      .map(row => {
+        const item = {
+          project: row.project,
+          workshop: row.workshop || null,
+          unit: row.unit
+        }
+        // 添加年份数据
+        const yearRange = selectedWaterYearRange.value.split('-')
+        const startYear = parseInt(yearRange[0])
+        const endYear = parseInt(yearRange[1])
+        for (let year = startYear; year <= endYear; year++) {
+          const amount = row[`amount_${year}`]
+          if (amount !== null && amount !== undefined && amount !== '') {
+            item[`amount_${year}`] = amount
+          } else {
+            item[`amount_${year}`] = null
+          }
+        }
+        return item
+      })
+    
+    await api.pcb.production.saveThreeYearsWaterConsumption(
+      props.enterpriseId,
+      selectedWaterYearRange.value,
+      items
+    )
+    
+    message.success('用水数据提交成功')
+    await new Promise(resolve => setTimeout(resolve, 300))
+    await loadWaterData()
+  } catch (error) {
+    console.error('提交用水数据失败:', error)
+    message.error('提交用水数据失败: ' + (error.message || '未知错误'))
+  }
 }
 
 // 用电相关操作
@@ -470,6 +565,7 @@ const addElectricityRow = () => {
   const newRow = {
     id: Date.now(),
     project: '',
+    workshop: '',
     unit: 'kWh'
   }
   
@@ -489,8 +585,49 @@ const removeElectricityRow = (index) => {
   formData.value.electricity.splice(index, 1)
 }
 
-const submitElectricityData = () => {
-  message.success('用电数据提交成功')
+const submitElectricityData = async () => {
+  if (!props.enterpriseId) {
+    message.warning('企业ID不能为空')
+    return
+  }
+  
+  try {
+    const items = formData.value.electricity
+      .filter(row => !row.isTotal && row.project && row.unit)
+      .map(row => {
+        const item = {
+          project: row.project,
+          workshop: row.workshop || null,
+          unit: row.unit
+        }
+        // 添加年份数据
+        const yearRange = selectedElectricityYearRange.value.split('-')
+        const startYear = parseInt(yearRange[0])
+        const endYear = parseInt(yearRange[1])
+        for (let year = startYear; year <= endYear; year++) {
+          const amount = row[`amount_${year}`]
+          if (amount !== null && amount !== undefined && amount !== '') {
+            item[`amount_${year}`] = amount
+          } else {
+            item[`amount_${year}`] = null
+          }
+        }
+        return item
+      })
+    
+    await api.pcb.production.saveThreeYearsElectricityConsumption(
+      props.enterpriseId,
+      selectedElectricityYearRange.value,
+      items
+    )
+    
+    message.success('用电数据提交成功')
+    await new Promise(resolve => setTimeout(resolve, 300))
+    await loadElectricityData()
+  } catch (error) {
+    console.error('提交用电数据失败:', error)
+    message.error('提交用电数据失败: ' + (error.message || '未知错误'))
+  }
 }
 
 // 天然气相关操作
@@ -498,6 +635,7 @@ const addGasRow = () => {
   const newRow = {
     id: Date.now(),
     project: '',
+    workshop: '',
     unit: 'm³'
   }
   
@@ -517,139 +655,209 @@ const removeGasRow = (index) => {
   formData.value.gas.splice(index, 1)
 }
 
-const submitGasData = () => {
-  message.success('天然气数据提交成功')
+const submitGasData = async () => {
+  if (!props.enterpriseId) {
+    message.warning('企业ID不能为空')
+    return
+  }
+  
+  try {
+    const items = formData.value.gas
+      .filter(row => !row.isTotal && row.project && row.unit)
+      .map(row => {
+        const item = {
+          project: row.project,
+          workshop: row.workshop || null,
+          unit: row.unit
+        }
+        // 添加年份数据
+        const yearRange = selectedGasYearRange.value.split('-')
+        const startYear = parseInt(yearRange[0])
+        const endYear = parseInt(yearRange[1])
+        for (let year = startYear; year <= endYear; year++) {
+          const amount = row[`amount_${year}`]
+          if (amount !== null && amount !== undefined && amount !== '') {
+            item[`amount_${year}`] = amount
+          } else {
+            item[`amount_${year}`] = null
+          }
+        }
+        return item
+      })
+    
+    await api.pcb.production.saveThreeYearsGasConsumption(
+      props.enterpriseId,
+      selectedGasYearRange.value,
+      items
+    )
+    
+    message.success('天然气数据提交成功')
+    await new Promise(resolve => setTimeout(resolve, 300))
+    await loadGasData()
+  } catch (error) {
+    console.error('提交天然气数据失败:', error)
+    message.error('提交天然气数据失败: ' + (error.message || '未知错误'))
+  }
 }
 
 
 // 加载数据
-const loading = ref(false)
+const loadingWater = ref(false)
+const loadingElectricity = ref(false)
+const loadingGas = ref(false)
 
-const loadData = async () => {
-  try {
-    loading.value = true
-    const response = await pcbApi.resourceConsumption.getAllData(props.enterpriseId)
-    
-    if (response.data && response.data.data) {
-      const data = response.data.data
-      
-      // 转换用水数据格式
-      if (data.water_records) {
-        formData.value.water = data.water_records.map(record => ({
-          id: record.id,
-          project: record.project,
-          unit: record.unit,
-          amount_2020: record.amount_2020,
-          amount_2021: record.amount_2021,
-          amount_2022: record.amount_2022,
-          amount_2023: record.amount_2023,
-          amount_2024: record.amount_2024
-        }))
-      }
-      
-      // 转换用电数据格式
-      if (data.electricity_records) {
-        formData.value.electricity = data.electricity_records.map(record => ({
-          id: record.id,
-          project: record.project,
-          unit: record.unit,
-          amount_2020: record.amount_2020,
-          amount_2021: record.amount_2021,
-          amount_2022: record.amount_2022,
-          amount_2023: record.amount_2023,
-          amount_2024: record.amount_2024
-        }))
-      }
-      
-      // 转换天然气数据格式
-      if (data.gas_records) {
-        formData.value.gas = data.gas_records.map(record => ({
-          id: record.id,
-          project: record.project,
-          unit: record.unit,
-          amount_2020: record.amount_2020,
-          amount_2021: record.amount_2021,
-          amount_2022: record.amount_2022,
-          amount_2023: record.amount_2023,
-          amount_2024: record.amount_2024,
-          gasType: record.gas_type,
-          source: record.source,
-          remark: record.remark
-        }))
-      }
-    }
-  } catch (error) {
-    console.error('加载资源能源消耗数据失败:', error)
-    message.error('加载数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 保存数据
-const saveData = async () => {
-  try {
-    loading.value = true
-    
-    // 转换数据格式
-    const requestData = {
-      water: {
-        records: formData.value.water.map(record => ({
-          project: record.project,
-          unit: record.unit,
-          amount_2020: record.amount_2020,
-          amount_2021: record.amount_2021,
-          amount_2022: record.amount_2022,
-          amount_2023: record.amount_2023,
-          amount_2024: record.amount_2024
-        }))
-      },
-      electricity: {
-        records: formData.value.electricity.map(record => ({
-          project: record.project,
-          unit: record.unit,
-          amount_2020: record.amount_2020,
-          amount_2021: record.amount_2021,
-          amount_2022: record.amount_2022,
-          amount_2023: record.amount_2023,
-          amount_2024: record.amount_2024
-        }))
-      },
-      gas: {
-        records: formData.value.gas.map(record => ({
-          project: record.project,
-          unit: record.unit,
-          amount_2020: record.amount_2020,
-          amount_2021: record.amount_2021,
-          amount_2022: record.amount_2022,
-          amount_2023: record.amount_2023,
-          amount_2024: record.amount_2024,
-          gas_type: record.gasType,
-          source: record.source,
-          remark: record.remark
-        }))
-      }
-    }
-    
-    const response = await pcbApi.resourceConsumption.saveAllData(props.enterpriseId, requestData)
-    
-    if (response.data && response.data.code === 200) {
-      message.success('数据保存成功')
+// 辅助函数：从响应数据中提取年份数据
+const getYearData = (item, yearRange) => {
+  const data = {}
+  const [startYear, endYear] = yearRange.split('-').map(y => parseInt(y))
+  for (let year = startYear; year <= endYear; year++) {
+    const amount = item[`amount_${year}`]
+    if (amount !== null && amount !== undefined && amount !== '') {
+      data[`amount_${year}`] = typeof amount === 'number' ? amount : parseFloat(amount)
     } else {
-      message.error('数据保存失败')
+      data[`amount_${year}`] = null
+    }
+  }
+  return data
+}
+
+const loadWaterData = async () => {
+  if (!props.enterpriseId) return
+  
+  try {
+    loadingWater.value = true
+    const response = await api.pcb.production.getThreeYearsWaterConsumption(
+      props.enterpriseId,
+      selectedWaterYearRange.value
+    )
+    
+    // 处理响应数据，兼容不同的响应格式
+    let dataArray = []
+    if (response) {
+      if (Array.isArray(response.data)) {
+        dataArray = response.data
+      } else if (response.data && Array.isArray(response.data.data)) {
+        dataArray = response.data.data
+      } else if (Array.isArray(response)) {
+        dataArray = response
+      }
+    }
+    
+    if (dataArray.length > 0) {
+      formData.value.water = dataArray.map((item, idx) => ({
+        id: item.id || Date.now() + idx,
+        project: item.project || '',
+        workshop: item.workshop || '',
+        unit: item.unit || 'm³',
+        ...getYearData(item, selectedWaterYearRange.value)
+      }))
+    } else {
+      if (formData.value.water.length === 0) {
+        addWaterRow()
+      }
     }
   } catch (error) {
-    console.error('保存资源能源消耗数据失败:', error)
-    message.error('保存数据失败')
+    console.error('加载用水数据失败:', error)
+    message.warning('加载用水数据失败，已初始化空表格')
+    if (formData.value.water.length === 0) {
+      addWaterRow()
+    }
   } finally {
-    loading.value = false
+    loadingWater.value = false
   }
 }
 
-// 暴露保存方法给父组件
-defineExpose({
-  saveData
-})
+const loadElectricityData = async () => {
+  if (!props.enterpriseId) return
+  
+  try {
+    loadingElectricity.value = true
+    const response = await api.pcb.production.getThreeYearsElectricityConsumption(
+      props.enterpriseId,
+      selectedElectricityYearRange.value
+    )
+    
+    // 处理响应数据，兼容不同的响应格式
+    let dataArray = []
+    if (response) {
+      if (Array.isArray(response.data)) {
+        dataArray = response.data
+      } else if (response.data && Array.isArray(response.data.data)) {
+        dataArray = response.data.data
+      } else if (Array.isArray(response)) {
+        dataArray = response
+      }
+    }
+    
+    if (dataArray.length > 0) {
+      formData.value.electricity = dataArray.map((item, idx) => ({
+        id: item.id || Date.now() + idx,
+        project: item.project || '',
+        workshop: item.workshop || '',
+        unit: item.unit || 'kWh',
+        ...getYearData(item, selectedElectricityYearRange.value)
+      }))
+    } else {
+      if (formData.value.electricity.length === 0) {
+        addElectricityRow()
+      }
+    }
+  } catch (error) {
+    console.error('加载用电数据失败:', error)
+    message.warning('加载用电数据失败，已初始化空表格')
+    if (formData.value.electricity.length === 0) {
+      addElectricityRow()
+    }
+  } finally {
+    loadingElectricity.value = false
+  }
+}
+
+const loadGasData = async () => {
+  if (!props.enterpriseId) return
+  
+  try {
+    loadingGas.value = true
+    const response = await api.pcb.production.getThreeYearsGasConsumption(
+      props.enterpriseId,
+      selectedGasYearRange.value
+    )
+    
+    // 处理响应数据，兼容不同的响应格式
+    let dataArray = []
+    if (response) {
+      if (Array.isArray(response.data)) {
+        dataArray = response.data
+      } else if (response.data && Array.isArray(response.data.data)) {
+        dataArray = response.data.data
+      } else if (Array.isArray(response)) {
+        dataArray = response
+      }
+    }
+    
+    if (dataArray.length > 0) {
+      formData.value.gas = dataArray.map((item, idx) => ({
+        id: item.id || Date.now() + idx,
+        project: item.project || '',
+        workshop: item.workshop || '',
+        unit: item.unit || 'm³',
+        ...getYearData(item, selectedGasYearRange.value)
+      }))
+    } else {
+      if (formData.value.gas.length === 0) {
+        addGasRow()
+      }
+    }
+  } catch (error) {
+    console.error('加载天然气数据失败:', error)
+    message.warning('加载天然气数据失败，已初始化空表格')
+    if (formData.value.gas.length === 0) {
+      addGasRow()
+    }
+  } finally {
+    loadingGas.value = false
+  }
+}
 
 // 确保数据结构完整
 watch(() => props.modelValue, (newVal) => {
@@ -679,7 +887,107 @@ watch(() => props.modelValue, (newVal) => {
 
 // 组件挂载时加载数据
 onMounted(() => {
-  loadData()
+  if (props.enterpriseId) {
+    loadWaterData()
+    loadElectricityData()
+    loadGasData()
+  }
+})
+
+// 计算用气表格展示数据（含三类总计行）
+const gasTableData = computed(() => {
+  const yearRange = selectedGasYearRange.value.split('-')
+  const startYear = parseInt(yearRange[0])
+  const endYear = parseInt(yearRange[1])
+  const rows = formData.value.gas || []
+
+  const sumByProject = (project, label) => {
+    const total = { id: `total_${project}`, isTotal: true, project: label, unit: 'm³' }
+    for (let y = startYear; y <= endYear; y++) {
+      let s = 0
+      rows.forEach(r => {
+        if (r.project === project) {
+          const v = Number(r[`amount_${y}`] || 0)
+          if (!isNaN(v)) s += v
+        }
+      })
+      total[`amount_${y}`] = s
+    }
+    return total
+  }
+
+  const totalProd = sumByProject('生产用气', '生产用气总计')
+  const totalNonProd = sumByProject('非直接生产用气', '非直接生产用气总计')
+  const grand = { id: 'total_all_gas', isTotal: true, project: '总用气量', unit: 'm³' }
+  for (let y = startYear; y <= endYear; y++) {
+    grand[`amount_${y}`] = Number(totalProd[`amount_${y}`] || 0) + Number(totalNonProd[`amount_${y}`] || 0)
+  }
+
+  return [...rows, totalProd, totalNonProd, grand]
+})
+
+// 计算用电表格展示数据（含三类总计行）
+const electricityTableData = computed(() => {
+  const yearRange = selectedElectricityYearRange.value.split('-')
+  const startYear = parseInt(yearRange[0])
+  const endYear = parseInt(yearRange[1])
+  const rows = formData.value.electricity || []
+
+  const sumByProject = (project, label) => {
+    const total = { id: `total_${project}`, isTotal: true, project: label, unit: 'kWh' }
+    for (let y = startYear; y <= endYear; y++) {
+      let s = 0
+      rows.forEach(r => {
+        if (r.project === project) {
+          const v = Number(r[`amount_${y}`] || 0)
+          if (!isNaN(v)) s += v
+        }
+      })
+      total[`amount_${y}`] = s
+    }
+    return total
+  }
+
+  const totalProd = sumByProject('生产用电', '生产用电总计')
+  const totalNonProd = sumByProject('非直接生产用电', '非直接生产用电总计')
+  const grand = { id: 'total_all_ele', isTotal: true, project: '总用电量', unit: 'kWh' }
+  for (let y = startYear; y <= endYear; y++) {
+    grand[`amount_${y}`] = Number(totalProd[`amount_${y}`] || 0) + Number(totalNonProd[`amount_${y}`] || 0)
+  }
+
+  return [...rows, totalProd, totalNonProd, grand]
+})
+
+// 计算用水表格展示数据（含三类总计行）
+const waterTableData = computed(() => {
+  const yearRange = selectedWaterYearRange.value.split('-')
+  const startYear = parseInt(yearRange[0])
+  const endYear = parseInt(yearRange[1])
+  const rows = formData.value.water || []
+
+  const sumByProject = (project) => {
+    const total = { id: `total_${project}`, isTotal: true, project: `${project}总计`, unit: 'm³' }
+    for (let y = startYear; y <= endYear; y++) {
+      let s = 0
+      rows.forEach(r => {
+        if (r.project === project) {
+          const v = Number(r[`amount_${y}`] || 0)
+          if (!isNaN(v)) s += v
+        }
+      })
+      total[`amount_${y}`] = s
+    }
+    return total
+  }
+
+  const totalProd = sumByProject('生产用水')
+  const totalLife = sumByProject('生活用水')
+  const grand = { id: 'total_all', isTotal: true, project: '总用水量', unit: 'm³' }
+  for (let y = startYear; y <= endYear; y++) {
+    grand[`amount_${y}`] = Number(totalProd[`amount_${y}`] || 0) + Number(totalLife[`amount_${y}`] || 0)
+  }
+
+  return [...rows, totalProd, totalLife, grand]
 })
 </script>
 

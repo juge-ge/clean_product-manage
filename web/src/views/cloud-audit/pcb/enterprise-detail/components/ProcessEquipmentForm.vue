@@ -16,15 +16,28 @@
         :data="formData.equipment"
         :row-key="row => row.id"
         :pagination="false"
-            size="small"
+        size="small"
         :row-props="getRowProps"
+        :loading="loading"
       />
-          </n-card>
+      <div class="table-footer">
+        <n-button
+          type="primary"
+          @click="submitEquipment"
+          :loading="submitting"
+        >
+          <template #icon>
+            <TheIcon icon="carbon:checkmark" />
+          </template>
+          提交
+        </n-button>
+      </div>
+    </n-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, h, watch } from 'vue'
+import { ref, computed, h, watch, onMounted } from 'vue'
 import { 
   NCard, 
   NDataTable,
@@ -35,6 +48,7 @@ import {
   useMessage
 } from 'naive-ui'
 import TheIcon from '@/components/icon/TheIcon.vue'
+import api from '@/api'
 
 const props = defineProps({
   modelValue: {
@@ -42,62 +56,25 @@ const props = defineProps({
     default: () => ({
       equipment: []
     })
+  },
+  enterpriseId: {
+    type: Number,
+    required: true
   }
 })
 
 const emit = defineEmits(['update:modelValue'])
 const message = useMessage()
 
+const loading = ref(false)
+const submitting = ref(false)
+
 const formData = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
-// 设备名称选项（枚举 + 自定义输入）
-const equipmentNameOptions = [
-  { label: '镀镍金自动线', value: '镀镍金自动线' },
-  { label: '蚀刻机', value: '蚀刻机' },
-  { label: '钻孔机', value: '钻孔机' },
-  { label: '压合机', value: '压合机' },
-  { label: '曝光机', value: '曝光机' },
-  { label: '显影机', value: '显影机' },
-  { label: '电镀线', value: '电镀线' },
-  { label: '测试机', value: '测试机' }
-]
-
-// 设备型号选项
-const equipmentModelOptions = [
-  { label: '镀铬镀镍金自动处理线', value: '镀铬镀镍金自动处理线' },
-  { label: '全自动蚀刻生产线', value: '全自动蚀刻生产线' },
-  { label: '高精度钻孔机', value: '高精度钻孔机' },
-  { label: '多层板压合机', value: '多层板压合机' },
-  { label: 'UV曝光机', value: 'UV曝光机' },
-  { label: '自动显影机', value: '自动显影机' },
-  { label: '连续电镀线', value: '连续电镀线' },
-  { label: '在线测试机', value: '在线测试机' }
-]
-
-// 电机型号选项
-const motorModelOptions = [
-  { label: 'MAV21325A-02', value: 'MAV21325A-02' },
-  { label: 'MAV21325A-01', value: 'MAV21325A-01' },
-  { label: 'MAV21325B-01', value: 'MAV21325B-01' },
-  { label: 'MAV21325B-02', value: 'MAV21325B-02' },
-  { label: 'MAV21325C-01', value: 'MAV21325C-01' },
-  { label: 'MAV21325C-02', value: 'MAV21325C-02' }
-]
-
-// 应用工艺选项
-const processOptions = [
-  { label: '镀镍金自动线', value: '镀镍金自动线' },
-  { label: '蚀刻工艺', value: '蚀刻工艺' },
-  { label: '钻孔工艺', value: '钻孔工艺' },
-  { label: '压合工艺', value: '压合工艺' },
-  { label: '曝光工艺', value: '曝光工艺' },
-  { label: '显影工艺', value: '显影工艺' },
-  { label: '电镀工艺', value: '电镀工艺' },
-  { label: '测试工艺', value: '测试工艺' }
-]
+// 设备名称、设备型号、电机型号、应用工艺改为手动输入，取消枚举依赖，保持与数据库解耦
 
 // 运行状况选项
 const statusOptions = [
@@ -120,12 +97,9 @@ const equipmentColumns = [
     title: '设备名称',
     key: 'equipmentName',
     width: 150,
-    render: (row) => h(NSelect, {
+    render: (row) => h(NInput, {
       value: row.equipmentName,
-      options: equipmentNameOptions,
-      filterable: true,
-      tag: true,
-      placeholder: '请选择或输入设备名称',
+      placeholder: '请输入设备名称',
       onUpdateValue: (value) => { row.equipmentName = value }
     })
   },
@@ -133,12 +107,9 @@ const equipmentColumns = [
     title: '设备型号',
     key: 'equipmentModel',
     width: 180,
-    render: (row) => h(NSelect, {
+    render: (row) => h(NInput, {
       value: row.equipmentModel,
-      options: equipmentModelOptions,
-      filterable: true,
-      tag: true,
-      placeholder: '请选择或输入设备型号',
+      placeholder: '请输入设备型号',
       onUpdateValue: (value) => { row.equipmentModel = value }
     })
   },
@@ -146,12 +117,9 @@ const equipmentColumns = [
     title: '电机型号',
     key: 'motorModel',
     width: 150,
-    render: (row) => h(NSelect, {
+    render: (row) => h(NInput, {
       value: row.motorModel,
-      options: motorModelOptions,
-      filterable: true,
-      tag: true,
-      placeholder: '请选择或输入电机型号',
+      placeholder: '请输入电机型号',
       onUpdateValue: (value) => { row.motorModel = value }
     })
   },
@@ -161,8 +129,9 @@ const equipmentColumns = [
     width: 100,
     render: (row) => h(NInputNumber, {
       value: row.power,
-      min: 0,
+      min: 0.1,
       precision: 1,
+      showButton: false,
       placeholder: '功率',
       onUpdateValue: (value) => { row.power = value }
     })
@@ -175,6 +144,7 @@ const equipmentColumns = [
       value: row.quantity,
       min: 1,
       precision: 0,
+      showButton: false,
       placeholder: '数量',
       onUpdateValue: (value) => { row.quantity = value }
     })
@@ -183,12 +153,9 @@ const equipmentColumns = [
     title: '应用工艺',
     key: 'process',
     width: 150,
-    render: (row) => h(NSelect, {
+    render: (row) => h(NInput, {
       value: row.process,
-      options: processOptions,
-      filterable: true,
-      tag: true,
-      placeholder: '请选择或输入应用工艺',
+      placeholder: '请输入应用工艺',
       onUpdateValue: (value) => { row.process = value }
     })
   },
@@ -241,19 +208,114 @@ const getRowProps = (row, index) => {
   }
 }
 
+// 获取企业设备信息
+const fetchEquipment = async () => {
+  if (!props.enterpriseId) return
+  
+  try {
+    loading.value = true
+    
+    const response = await api.pcb.processEquipment.getEquipment(props.enterpriseId)
+    
+    if (response && response.data && Array.isArray(response.data)) {
+      // 将数据转换为前端格式，并添加id字段
+      formData.value.equipment = response.data.map((item, idx) => {
+        return {
+          id: item.id || Date.now() + idx,
+          equipmentName: item.equipmentName || item.equipment_name || '',
+          equipmentModel: item.equipmentModel || item.equipment_model || '',
+          motorModel: item.motorModel || item.motor_model || '',
+          power: item.power || null,
+          quantity: item.quantity || 1,
+          process: item.process || '',
+          status: item.status || '良好',
+          remark: item.remark || null
+        }
+      })
+      
+      // 如果表格为空，添加一条空白记录
+      if (formData.value.equipment.length === 0) {
+        addEquipmentRow()
+      }
+    } else {
+      // 如果没有数据，添加默认行
+      if (formData.value.equipment.length === 0) {
+        addEquipmentRow()
+      }
+    }
+  } catch (error) {
+    console.error('获取企业设备信息失败:', error)
+    message.warning('获取数据失败，已初始化空表格')
+    // 如果获取失败，初始化空表格
+    if (formData.value.equipment.length === 0) {
+      addEquipmentRow()
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 提交企业设备信息
+const submitEquipment = async () => {
+  if (!props.enterpriseId) {
+    message.warning('企业ID不能为空')
+    return
+  }
+  
+  // 移除必填字段验证，允许空字段提交
+  
+  try {
+    submitting.value = true
+    
+    // 转换数据格式，确保字段名正确，允许空值
+    const items = formData.value.equipment.map(row => {
+      return {
+        equipmentName: row.equipmentName || '',
+        equipmentModel: row.equipmentModel || '',
+        motorModel: row.motorModel || '',
+        power: row.power || null,
+        quantity: row.quantity || 1,
+        process: row.process || '',
+        status: row.status || '良好',
+        remark: row.remark || null
+      }
+    })
+    
+    await api.pcb.processEquipment.saveEquipment(
+      props.enterpriseId,
+      items
+    )
+    
+    message.success('设备信息提交成功')
+    
+    // 延迟一下再获取数据，确保数据库已更新
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // 重新获取数据以刷新显示
+    await fetchEquipment()
+  } catch (error) {
+    console.error('提交设备信息失败:', error)
+    message.error('提交设备信息失败: ' + (error.message || '未知错误'))
+  } finally {
+    submitting.value = false
+  }
+}
+
 // 确保数据结构完整
 watch(() => props.modelValue, (newVal) => {
   if (newVal) {
     if (!newVal.equipment) {
       newVal.equipment = []
     }
-    
-    // 如果表格为空，添加一条空白记录
-    if (newVal.equipment.length === 0) {
-      addEquipmentRow()
-    }
   }
 }, { immediate: true, deep: true })
+
+// 组件挂载时获取数据
+onMounted(() => {
+  if (props.enterpriseId) {
+    fetchEquipment()
+  }
+})
 </script>
 
 <style scoped>
@@ -318,6 +380,13 @@ watch(() => props.modelValue, (newVal) => {
   display: inline-block;
   border-bottom: 2px solid #ff8c00;
   padding-bottom: 8px;
+}
+
+/* 表格底部提交按钮样式 */
+.table-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-start;
 }
 </style>
 

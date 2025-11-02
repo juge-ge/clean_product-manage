@@ -20,9 +20,12 @@ from app.schemas.solid_waste import (
     PCBSolidWasteCategoryResponse,
     PCBSolidWasteDataRequest,
     PCBSolidWasteDataResponse,
-    PCBSolidWasteSaveResponse
+    PCBSolidWasteSaveResponse,
+    PCBSolidWasteThreeYearsRequest
 )
 from app.core.dependency import DependAuth
+from app.schemas.base import Success
+from fastapi import Query
 
 router = APIRouter()
 
@@ -221,6 +224,106 @@ async def delete_solid_waste_category(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除固体废物分类失败: {str(e)}"
+        )
+
+
+# ==================== 近三年固体废物数据相关API ====================
+
+@router.get("/enterprise/{enterprise_id}/three-years", summary="获取企业近三年固体废物情况")
+async def get_three_years_solid_waste(
+    enterprise_id: int,
+    year_range: str = Query(..., description="年份范围，如：2022-2024"),
+    current_user=DependAuth
+):
+    """
+    获取企业近三年固体废物情况数据
+    """
+    try:
+        records = await solid_waste_record_controller.get_by_enterprise(enterprise_id)
+        
+        # 解析年份范围
+        start_year, end_year = map(int, year_range.split('-'))
+        
+        # 转换为前端格式
+        items = []
+        for record in records:
+            item = {
+                "id": record.id,
+                "category": record.category,
+                "name": record.name,
+                "unit": record.unit,
+                "disposal_method": record.disposal_method
+            }
+            # 添加年份数据
+            for year in range(start_year, end_year + 1):
+                year_key = f"amount_{year}"
+                value = getattr(record, year_key, None)
+                if value is not None:
+                    item[year_key] = float(value)
+                else:
+                    item[year_key] = None
+            
+            items.append(item)
+        
+        return Success(data=items, msg="获取成功")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取企业近三年固体废物情况失败: {str(e)}"
+        )
+
+
+@router.post("/enterprise/{enterprise_id}/three-years", summary="保存企业近三年固体废物情况")
+async def save_three_years_solid_waste(
+    enterprise_id: int,
+    data: PCBSolidWasteThreeYearsRequest,
+    current_user=DependAuth
+):
+    """
+    保存企业近三年固体废物情况数据
+    """
+    try:
+        # 转换为字典
+        items_dict = []
+        for item in data.items:
+            if hasattr(item, 'model_dump'):
+                item_dict = item.model_dump(by_alias=True)
+            else:
+                item_dict = item.dict(by_alias=True)
+            items_dict.append(item_dict)
+        
+        results = await solid_waste_record_controller.batch_upsert(enterprise_id, items_dict)
+        
+        # 保存后立即验证数据是否正确保存
+        saved_records = await solid_waste_record_controller.get_by_enterprise(enterprise_id)
+        saved_items = []
+        start_year, end_year = map(int, data.year_range.split('-'))
+        for record in saved_records:
+            item = {
+                "id": record.id,
+                "category": record.category,
+                "name": record.name,
+                "unit": record.unit,
+                "disposal_method": record.disposal_method
+            }
+            for year in range(start_year, end_year + 1):
+                year_key = f"amount_{year}"
+                value = getattr(record, year_key, None)
+                if value is not None:
+                    item[year_key] = float(value)
+                else:
+                    item[year_key] = None
+            saved_items.append(item)
+        
+        return Success(data={"count": len(results), "saved_data": saved_items}, msg="保存成功")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"保存企业近三年固体废物情况失败: {str(e)}"
         )
 
 

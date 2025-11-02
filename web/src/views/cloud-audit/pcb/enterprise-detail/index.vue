@@ -52,13 +52,29 @@
           @update="handleAuditUpdate"
         />
       </n-tab-pane>
-      <n-tab-pane name="scheme-library" tab="方案库">
+      <!-- 新增：问题及清洁生产方案（带图标） -->
+      <n-tab-pane name="problem-solution">
+        <template #tab>
+          <span class="tab-with-icon"><TheIcon icon="carbon:lightbulb" class="mr-6" />问题及清洁生产方案</span>
+        </template>
+        <ProblemSolution 
+          :enterprise-id="enterpriseId"
+          @update="handleSchemeUpdate"
+        />
+      </n-tab-pane>
+      <n-tab-pane name="scheme-library">
+        <template #tab>
+          <span class="tab-with-icon"><TheIcon icon="carbon:library" class="mr-6" />方案库</span>
+        </template>
         <SchemeLibrary 
           :enterprise-id="enterpriseId"
           @update="handleSchemeUpdate"
         />
       </n-tab-pane>
-      <n-tab-pane name="report" tab="审核报告">
+      <n-tab-pane name="report">
+        <template #tab>
+          <span class="tab-with-icon"><TheIcon icon="carbon:document-text" class="mr-6" />审核报告</span>
+        </template>
         <Report 
           :enterprise-id="enterpriseId"
           @update="handleReportUpdate"
@@ -78,6 +94,7 @@ import BasicInfo from './basic-info.vue'
 import Planning from './planning.vue'
 import PreAudit from './pre-audit.vue'
 import Audit from './audit.vue'
+import ProblemSolution from './problem-solution.vue'
 import SchemeLibrary from './scheme-library.vue'
 import Report from './report.vue'
 // import { mockApi } from '@/mock/pcb'

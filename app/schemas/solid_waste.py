@@ -88,7 +88,24 @@ class PCBSolidWasteCategoryResponse(PCBSolidWasteCategoryBase):
         from_attributes = True
 
 
-# 批量操作相关Schema
+# 批量操作相关Schema（用于三年数据交互）
+class PCBSolidWasteThreeYearsItem(BaseModel):
+    """近三年固体废物项Schema - 支持前端camelCase字段名"""
+    category: str = Field(..., description="类别")
+    name: str = Field(..., description="名称")
+    unit: str = Field(..., description="单位")
+    # 动态年份字段，如 amount_2022, amount_2023, amount_2024
+    # 使用 extra 允许额外字段
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
+
+
+class PCBSolidWasteThreeYearsRequest(BaseModel):
+    """近三年固体废物请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBSolidWasteThreeYearsItem] = Field(default_factory=list, description="固体废物记录列表")
+
+
 class PCBSolidWasteDataRequest(BaseModel):
     """固体废物数据请求"""
     waste: List[PCBSolidWasteRecordCreate] = Field(default_factory=list, description="固体废物记录数据")

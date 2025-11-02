@@ -116,3 +116,65 @@ class PCBProductionDataSaveResponse(BaseModel):
     productOutput: int = Field(..., description="产品产量记录数")
     qualificationRate: int = Field(..., description="合格率记录数")
     outputValue: int = Field(..., description="产值情况记录数")
+
+
+# ==================== 近三年数据Schema ====================
+
+class PCBProductOutputThreeYearsItem(BaseModel):
+    """近三年产品产量项"""
+    type: str = Field(..., description="类型(rigid/flexible)")
+    main_product: str = Field(..., description="主要产品")
+    unit: str = Field(..., description="单位")
+    layers: Optional[int] = Field(None, description="层数")
+    # 动态年份字段，如 output_2022, output_2023, output_2024
+    # 使用 extra 允许额外字段
+
+    model_config = {"extra": "allow"}  # Pydantic 2.x: 允许额外字段
+
+
+class PCBProductOutputThreeYearsRequest(BaseModel):
+    """近三年产品产量请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBProductOutputThreeYearsItem] = Field(default_factory=list, description="产品产量列表")
+
+
+class PCBQualificationRateThreeYearsRequest(BaseModel):
+    """近三年合格率请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBQualificationRateCreate] = Field(default_factory=list, description="合格率列表")
+
+
+class PCBOutputValueThreeYearsItem(BaseModel):
+    """近三年产值项Schema - 支持前端camelCase字段名"""
+    year: str = Field(..., description="年份")
+    unit: str = Field(..., description="单位")
+    annualOutputValue: Optional[float] = Field(None, description="年产值")
+    incomeTax: Optional[float] = Field(None, description="所得税")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}  # 允许字段名别名和额外字段
+
+
+class PCBOutputValueThreeYearsRequest(BaseModel):
+    """近三年产值请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBOutputValueThreeYearsItem] = Field(default_factory=list, description="产值列表")
+
+
+class PCBRawMaterialUsageThreeYearsItem(BaseModel):
+    """近三年原辅材料使用项Schema - 支持前端camelCase字段名"""
+    type: str = Field(..., description="类型(rigid/flexible)")
+    main_product: str = Field(..., alias="mainProduct", description="主要产品")
+    product_output: Optional[float] = Field(None, alias="productOutput", description="产品产量(m²)")
+    material_name: str = Field(..., alias="materialName", description="原辅材料名称")
+    unit: str = Field(..., description="单位")
+    # 动态年份字段，如 amount_2022, amount_2023, amount_2024
+    # 以及 unitConsumption_2022, unitConsumption_2023, unitConsumption_2024
+    # 使用 extra 允许额外字段
+    
+    model_config = {"extra": "allow", "populate_by_name": True}  # Pydantic 2.x: 允许额外字段和字段名别名
+
+
+class PCBRawMaterialUsageThreeYearsRequest(BaseModel):
+    """近三年原辅材料使用请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBRawMaterialUsageThreeYearsItem] = Field(default_factory=list, description="原辅材料使用列表")

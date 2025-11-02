@@ -9,9 +9,9 @@ from datetime import datetime
 class PCBWastewaterAnalysisBase(BaseModel):
     """废水产生分析基础模式"""
     category: str = Field(..., description="废水类别", max_length=100)
-    source: str = Field(..., description="来源")
-    pollutants: str = Field(..., description="主要污染物")
-    disposal: str = Field(..., description="处置方式")
+    source: str = Field(default="", description="来源")
+    pollutants: str = Field(default="", description="主要污染物")
+    disposal: str = Field(default="", description="处置方式")
     remark: Optional[str] = Field(None, description="备注")
 
 
@@ -43,9 +43,9 @@ class PCBWastewaterAnalysisResponse(PCBWastewaterAnalysisBase):
 class PCBWasteGasAnalysisBase(BaseModel):
     """废气产生情况基础模式"""
     gas_type: str = Field(..., description="种类", max_length=100)
-    pollutants: str = Field(..., description="主要污染物", max_length=200)
-    location: str = Field(..., description="产生部位")
-    treatment: str = Field(..., description="处理方法")
+    pollutants: str = Field(default="", description="主要污染物", max_length=200)
+    location: str = Field(default="", description="产生部位")
+    treatment: str = Field(default="", description="处理方法")
     remark: Optional[str] = Field(None, description="备注")
 
 
@@ -112,3 +112,63 @@ class PCBPollutionControlSaveResponse(BaseModel):
     success: bool = Field(True, description="保存是否成功")
     message: str = Field("保存成功", description="响应消息")
     data: Optional[dict] = Field(None, description="保存的数据")
+
+
+# ==================== 近三年废水情况统计相关Schema（用于前端交互）====================
+
+class PCBWastewaterStatRecordBase(BaseModel):
+    """废水情况统计记录基础模式"""
+    project: str = Field(..., description="项目名称（生产废水/生活废水）", max_length=100)
+    workshop: Optional[str] = Field(None, description="使用车间", max_length=200)
+    unit: str = Field(..., description="单位", max_length=20)
+    # 年份数据 - 支持年份范围选择
+    amount_2020: Optional[float] = Field(None, description="2020年用量")
+    amount_2021: Optional[float] = Field(None, description="2021年用量")
+    amount_2022: Optional[float] = Field(None, description="2022年用量")
+    amount_2023: Optional[float] = Field(None, description="2023年用量")
+    amount_2024: Optional[float] = Field(None, description="2024年用量")
+    remark: Optional[str] = Field(None, description="备注")
+
+
+class PCBWastewaterStatRecordCreate(PCBWastewaterStatRecordBase):
+    """创建废水情况统计记录"""
+    pass
+
+
+class PCBWastewaterStatRecordUpdate(BaseModel):
+    """更新废水情况统计记录"""
+    project: Optional[str] = Field(None, description="项目名称", max_length=100)
+    workshop: Optional[str] = Field(None, description="使用车间", max_length=200)
+    unit: Optional[str] = Field(None, description="单位", max_length=20)
+    amount_2020: Optional[float] = Field(None, description="2020年用量")
+    amount_2021: Optional[float] = Field(None, description="2021年用量")
+    amount_2022: Optional[float] = Field(None, description="2022年用量")
+    amount_2023: Optional[float] = Field(None, description="2023年用量")
+    amount_2024: Optional[float] = Field(None, description="2024年用量")
+    remark: Optional[str] = Field(None, description="备注")
+
+
+class PCBWastewaterStatRecordResponse(PCBWastewaterStatRecordBase):
+    """废水情况统计记录响应"""
+    id: int
+    enterprise_id: int
+    
+    class Config:
+        from_attributes = True
+
+
+class PCBWastewaterStatThreeYearsItem(BaseModel):
+    """近三年废水情况统计项Schema - 支持前端camelCase字段名"""
+    project: str = Field(..., description="项目名称（生产废水/生活废水）")
+    workshop: Optional[str] = Field(None, description="使用车间")
+    unit: str = Field(..., description="单位")
+    # 动态年份字段，如 amount_2022, amount_2023, amount_2024
+    # 使用 extra 允许额外字段
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
+
+
+class PCBWastewaterStatThreeYearsRequest(BaseModel):
+    """近三年废水情况统计请求Schema"""
+    year_range: str = Field(..., description="年份范围，如：2022-2024")
+    items: List[PCBWastewaterStatThreeYearsItem] = Field(default_factory=list, description="废水统计记录列表")

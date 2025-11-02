@@ -147,6 +147,42 @@ class PCBAuditResultController(CRUDBase[PCBAuditResult, PCBAuditResultCreate, PC
     async def get_enterprise_results(self, enterprise_id: int) -> List[PCBAuditResult]:
         """获取企业所有审核结果"""
         return await self.model.filter(enterprise_id=enterprise_id).order_by("indicator_id")
+    
+    async def get_level2_and_below_indicators(self, enterprise_id: int) -> List[Dict]:
+        """获取企业Ⅱ级及以下的指标列表（用于问题清单）"""
+        # 查询Ⅱ级、Ⅲ级、不达标的审核结果
+        results = await self.model.filter(
+            enterprise_id=enterprise_id,
+            level__in=["II级", "III级", "不达标"]
+        ).order_by("indicator_id")
+        
+        # 获取所有指标信息
+        from app.models.pcb import PCBIndicator
+        indicators = await PCBIndicator.all()
+        indicator_map = {ind.id: ind for ind in indicators}
+        
+        # 构建问题清单
+        issue_list = []
+        for result in results:
+            indicator = indicator_map.get(result.indicator_id)
+            if not indicator:
+                continue
+            
+            issue_list.append({
+                "indicator_id": result.indicator_id,
+                "primary_indicator": indicator.category,
+                "primary_weight": float(indicator.category_weight) if indicator.category_weight else 0.0,
+                "secondary_indicator": indicator.name,
+                "secondary_weight": float(indicator.weight) if indicator.weight else 0.0,
+                "current_level": result.level or "",
+                "problem": result.comment or "",
+                "advice": "",
+                "department": "",
+                "owner": "",
+                "deadline": ""
+            })
+        
+        return issue_list
 
     async def get_or_create_result(
         self, enterprise_id: int, indicator_id: int
@@ -190,20 +226,34 @@ class PCBAuditResultController(CRUDBase[PCBAuditResult, PCBAuditResultCreate, PC
         self, enterprise_id: int, results_data: List[Dict]
     ) -> List[PCBAuditResult]:
         """批量更新审核结果"""
+        from datetime import datetime
         updated_results = []
         for data in results_data:
             indicator_id = data.get("indicator_id")
             level = data.get("level")
             score = data.get("score")
             current_value = data.get("current_value")
+            remark = data.get("remark") or data.get("comment")  # 支持remark和comment两个字段名
 
             result = await self.get_or_create_result(enterprise_id, indicator_id)
-            result.level = level
+            if level is not None:
+                result.level = level
             if score is not None:
                 result.score = Decimal(str(score))
             if current_value is not None:
-                result.current_value = Decimal(str(current_value))
-
+                # 如果是字符串类型（等级文本），不存储到Decimal字段，保持current_value为None
+                # 但可以通过其他方式存储（如果模型有文本字段的话）
+                if isinstance(current_value, str):
+                    # 字符串类型（如"Ⅰ级、Ⅱ级、Ⅲ级"）不存储在Decimal字段
+                    # 可以存储在comment字段中作为备注，或者保持current_value为None
+                    pass
+                else:
+                    result.current_value = Decimal(str(current_value))
+            if remark is not None:
+                result.comment = remark
+            
+            # 更新审核时间
+            result.audit_date = datetime.now()
             await result.save()
             updated_results.append(result)
 
@@ -239,85 +289,108 @@ class PCBAuditResultController(CRUDBase[PCBAuditResult, PCBAuditResultCreate, PC
         schemes.sort(key=lambda x: (x["priority"], -x["relevance_score"]))
         return schemes
 
-    async def calculate_summary(self, enterprise_id: int) -> Dict:
-        """计算审核汇总数据"""
+    async def calculate_summary(
+        self, 
+        enterprise_id: int,
+        product_outputs: Optional[Dict[int, float]] = None
+    ) -> Dict:
+        """
+        计算审核汇总数据（使用新的综合评价指数计算方法）
+        
+        参数:
+            enterprise_id: 企业ID
+            product_outputs: 产品产量数据 {indicator_id: output_value}
+        """
+        from app.utils.pcb_score_calculator import (
+            calculate_comprehensive_evaluation_index,
+            determine_clean_production_level
+        )
+        
         results = await self.get_enterprise_results(enterprise_id)
-
-        total_score = Decimal("0")
-        valid_count = 0
+        
+        # 准备指标数据用于计算综合评价指数
+        indicators_data = []
+        limiting_indicators_level = []
+        
         improvement_items = 0
         limiting_indicators = 0
-        non_compliant_limiting = 0
-
-        # 按类别统计得分
-        category_scores = {}
-
+        
         for result in results:
             # 获取指标信息
             indicator = await PCBIndicator.get_or_none(id=result.indicator_id)
             if not indicator:
                 continue
-
-            # 统计总分
-            if result.level and result.level != "待评估":
-                total_score += result.score * indicator.weight
-                valid_count += 1
-
-                # 统计类别得分
-                if indicator.category not in category_scores:
-                    category_scores[indicator.category] = {
-                        "total": Decimal("0"),
-                        "count": 0,
-                    }
-                category_scores[indicator.category]["total"] += result.score
-                category_scores[indicator.category]["count"] += 1
-
-            # 统计待改进项
-            if result.level and result.level not in ["I级", "待评估"]:
-                improvement_items += 1
-
+            
             # 统计限定性指标
             if indicator.is_limiting:
                 limiting_indicators += 1
-                if result.level == "不达标":
-                    non_compliant_limiting += 1
-
-        # 计算平均分
-        average_score = total_score / valid_count if valid_count > 0 else Decimal("0")
-
-        # 计算各类别平均分
-        for category in category_scores:
-            cat_data = category_scores[category]
-            cat_data["average"] = cat_data["total"] / cat_data["count"] if cat_data["count"] > 0 else Decimal("0")
-
-        # 确定综合等级
-        overall_level = self._determine_level(average_score, non_compliant_limiting > 0)
-
+                if result.level:
+                    limiting_indicators_level.append(result.level)
+            
+            # 统计待改进项：三级及三级以下的指标个数，删去限定性指标
+            if result.level and result.level not in ["I级", "待评估"]:
+                # 排除限定性指标
+                if not indicator.is_limiting:
+                    # 三级及三级以下：II级、III级、不达标
+                    if result.level in ["II级", "III级", "不达标"]:
+                        improvement_items += 1
+            
+            # 准备指标数据
+            indicators_data.append({
+                'indicator_id': result.indicator_id,
+                'id': result.indicator_id,
+                'category': indicator.category,
+                'category_weight': float(indicator.category_weight) if indicator.category_weight else 0,
+                'weight': float(indicator.weight) if indicator.weight else 0,
+                'is_dynamic_weight': indicator.is_dynamic_weight,
+                'level': result.level if result.level and result.level != "待评估" else None,
+                'is_limiting': indicator.is_limiting,
+            })
+        
+        # 计算YⅠ, YⅡ, YⅢ
+        y1 = calculate_comprehensive_evaluation_index(
+            indicators_data, 'I级', product_outputs
+        )
+        y2 = calculate_comprehensive_evaluation_index(
+            indicators_data, 'II级', product_outputs
+        )
+        y3 = calculate_comprehensive_evaluation_index(
+            indicators_data, 'III级', product_outputs
+        )
+        
+        # 准备所有指标的评级信息（用于判定I级时需要检查非限定性指标）
+        all_indicators_level = [
+            {
+                'indicator_id': ind.get('indicator_id') or ind.get('id'),
+                'level': ind.get('level'),
+                'is_limiting': ind.get('is_limiting', False)
+            }
+            for ind in indicators_data if ind.get('level')
+        ]
+        
+        # 确定清洁生产水平
+        overall_level = determine_clean_production_level(
+            y1, y2, y3, limiting_indicators_level, all_indicators_level
+        )
+        
         return {
-            "total_score": float(average_score),
+            "y1": float(y1),
+            "y2": float(y2),
+            "y3": float(y3),
+            "total_score": float(y1),  # 保持兼容性，使用YⅠ作为总分
             "overall_level": overall_level,
             "improvement_items": improvement_items,
             "limiting_indicators": limiting_indicators,
-            "non_compliant_limiting": non_compliant_limiting,
-            "category_scores": {
-                k: {"average": float(v["average"]), "count": v["count"]}
-                for k, v in category_scores.items()
-            },
+            "limiting_indicators_level": limiting_indicators_level,
+            "evaluation_details": {
+                "y1": float(y1),
+                "y2": float(y2),
+                "y3": float(y3),
+                "meet_level1_conditions": y1 >= 85 and overall_level == "I级",
+                "meet_level2_conditions": y2 >= 85 and overall_level == "II级",
+                "meet_level3_conditions": y3 == 100 and overall_level == "III级",
+            }
         }
-
-    def _determine_level(self, score: Decimal, has_limiting_fail: bool) -> str:
-        """根据分数确定等级"""
-        if has_limiting_fail:
-            return "III级"  # 限定性指标不达标，最高III级
-
-        if score >= Decimal("90"):
-            return "I级"
-        elif score >= Decimal("80"):
-            return "II级"
-        elif score >= Decimal("60"):
-            return "III级"
-        else:
-            return "不达标"
 
 
 class PCBSchemeController(CRUDBase[PCBScheme, PCBSchemeCreate, PCBSchemeUpdate]):

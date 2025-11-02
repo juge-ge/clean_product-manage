@@ -33,6 +33,42 @@ class PCBWaterConsumptionRecordController(CRUDBase[PCBWaterConsumptionRecord, PC
         """获取企业的所有用水记录"""
         return await self.model.filter(enterprise_id=enterprise_id).order_by('project')
     
+    async def batch_upsert(self, enterprise_id: int, items: List[Dict]) -> List[PCBWaterConsumptionRecord]:
+        """批量更新或插入用水记录 - 先删除后创建确保删除功能正常"""
+        # 先删除该企业的所有用水记录，确保删除功能正常工作
+        await self.model.filter(enterprise_id=enterprise_id).delete()
+        
+        # 创建新记录
+        results = []
+        for item in items:
+            # 构建记录数据
+            record_data = {
+                "enterprise_id": enterprise_id,
+                "project": item.get("project", ""),
+                "workshop": item.get("workshop"),
+                "unit": item.get("unit", "")
+            }
+            
+            # 添加年份数据
+            for year in range(2020, 2025):
+                year_key = f"amount_{year}"
+                if year_key in item:
+                    value = item[year_key]
+                    # 确保0值被正确处理
+                    if value is None or value == "":
+                        record_data[year_key] = None
+                    else:
+                        record_data[year_key] = Decimal(str(value))
+            
+            # 验证必填字段
+            if not record_data["project"] or not record_data["unit"]:
+                continue
+            
+            new_record = await self.model.create(**record_data)
+            results.append(new_record)
+        
+        return results
+    
 
 
 class PCBElectricityConsumptionRecordController(CRUDBase[PCBElectricityConsumptionRecord, PCBElectricityConsumptionRecordCreate, PCBElectricityConsumptionRecordUpdate]):
@@ -41,6 +77,42 @@ class PCBElectricityConsumptionRecordController(CRUDBase[PCBElectricityConsumpti
     async def get_by_enterprise(self, enterprise_id: int) -> List[PCBElectricityConsumptionRecord]:
         """获取企业的所有用电记录"""
         return await self.model.filter(enterprise_id=enterprise_id).order_by('project')
+    
+    async def batch_upsert(self, enterprise_id: int, items: List[Dict]) -> List[PCBElectricityConsumptionRecord]:
+        """批量更新或插入用电记录 - 先删除后创建确保删除功能正常"""
+        # 先删除该企业的所有用电记录，确保删除功能正常工作
+        await self.model.filter(enterprise_id=enterprise_id).delete()
+        
+        # 创建新记录
+        results = []
+        for item in items:
+            # 构建记录数据
+            record_data = {
+                "enterprise_id": enterprise_id,
+                "project": item.get("project", ""),
+                "workshop": item.get("workshop"),
+                "unit": item.get("unit", "")
+            }
+            
+            # 添加年份数据
+            for year in range(2020, 2025):
+                year_key = f"amount_{year}"
+                if year_key in item:
+                    value = item[year_key]
+                    # 确保0值被正确处理
+                    if value is None or value == "":
+                        record_data[year_key] = None
+                    else:
+                        record_data[year_key] = Decimal(str(value))
+            
+            # 验证必填字段
+            if not record_data["project"] or not record_data["unit"]:
+                continue
+            
+            new_record = await self.model.create(**record_data)
+            results.append(new_record)
+        
+        return results
 
 
 class PCBGasConsumptionRecordController(CRUDBase[PCBGasConsumptionRecord, PCBGasConsumptionRecordCreate, PCBGasConsumptionRecordUpdate]):
@@ -53,6 +125,42 @@ class PCBGasConsumptionRecordController(CRUDBase[PCBGasConsumptionRecord, PCBGas
     async def get_by_year_range(self, enterprise_id: int, start_year: int, end_year: int) -> List[PCBGasConsumptionRecord]:
         """获取指定年份范围的天然气记录"""
         return await self.model.filter(enterprise_id=enterprise_id).order_by('project')
+    
+    async def batch_upsert(self, enterprise_id: int, items: List[Dict]) -> List[PCBGasConsumptionRecord]:
+        """批量更新或插入天然气记录 - 先删除后创建确保删除功能正常"""
+        # 先删除该企业的所有天然气记录，确保删除功能正常工作
+        await self.model.filter(enterprise_id=enterprise_id).delete()
+        
+        # 创建新记录
+        results = []
+        for item in items:
+            # 构建记录数据
+            record_data = {
+                "enterprise_id": enterprise_id,
+                "project": item.get("project", ""),
+                "workshop": item.get("workshop"),
+                "unit": item.get("unit", "")
+            }
+            
+            # 添加年份数据
+            for year in range(2020, 2025):
+                year_key = f"amount_{year}"
+                if year_key in item:
+                    value = item[year_key]
+                    # 确保0值被正确处理
+                    if value is None or value == "":
+                        record_data[year_key] = None
+                    else:
+                        record_data[year_key] = Decimal(str(value))
+            
+            # 验证必填字段
+            if not record_data["project"] or not record_data["unit"]:
+                continue
+            
+            new_record = await self.model.create(**record_data)
+            results.append(new_record)
+        
+        return results
 
 
 class PCBResourceConsumptionSummaryController(CRUDBase[PCBResourceConsumptionSummary, PCBResourceConsumptionSummaryCreate, PCBResourceConsumptionSummaryUpdate]):

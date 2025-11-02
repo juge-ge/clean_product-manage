@@ -12,19 +12,20 @@ class PCBOrganizedGasMonitoringBase(BaseModel):
     monitoring_point: str = Field(..., description="监测点位", max_length=100)
     monitoring_time: str = Field(..., description="监测时间", max_length=50)
     
-    # 监测项目及化验结果
-    nitrogen_oxides: Optional[Decimal] = Field(None, description="氮氧化物", ge=0)
-    hydrogen_chloride: Optional[Decimal] = Field(None, description="氯化氢", ge=0)
-    hydrogen_cyanide: Optional[Decimal] = Field(None, description="氰化氢", ge=0)
-    sulfuric_acid_mist: Optional[Decimal] = Field(None, description="硫酸雾", ge=0)
-    chromic_acid_mist: Optional[Decimal] = Field(None, description="铬酸雾", ge=0)
-    fluoride: Optional[Decimal] = Field(None, description="氟化物", ge=0)
-    phenol: Optional[Decimal] = Field(None, description="酚类", ge=0)
-    non_methane_hydrocarbons: Optional[Decimal] = Field(None, description="非甲烷总烃", ge=0)
-    benzene: Optional[Decimal] = Field(None, description="苯", ge=0)
-    toluene: Optional[Decimal] = Field(None, description="甲苯", ge=0)
-    xylene: Optional[Decimal] = Field(None, description="二甲苯", ge=0)
-    toluene_xylene_total: Optional[Decimal] = Field(None, description="甲苯与二甲苯合计", ge=0)
+    # 监测项目及化验结果（支持ND值，使用字符串类型）
+    nitrogen_oxides: Optional[str] = Field(None, description="氮氧化物（支持ND）", max_length=50)
+    hydrogen_chloride: Optional[str] = Field(None, description="氯化氢（支持ND）", max_length=50)
+    hydrogen_cyanide: Optional[str] = Field(None, description="氰化氢（支持ND）", max_length=50)
+    sulfuric_acid_mist: Optional[str] = Field(None, description="硫酸雾（支持ND）", max_length=50)
+    chromic_acid_mist: Optional[str] = Field(None, description="铬酸雾（支持ND）", max_length=50)
+    fluoride: Optional[str] = Field(None, description="氟化物（支持ND）", max_length=50)
+    phenol: Optional[str] = Field(None, description="酚类（支持ND）", max_length=50)
+    non_methane_hydrocarbons: Optional[str] = Field(None, description="非甲烷总烃（支持ND）", max_length=50)
+    benzene: Optional[str] = Field(None, description="苯（支持ND）", max_length=50)
+    toluene: Optional[str] = Field(None, description="甲苯（支持ND）", max_length=50)
+    xylene: Optional[str] = Field(None, description="二甲苯（支持ND）", max_length=50)
+    toluene_xylene_total: Optional[str] = Field(None, description="甲苯与二甲苯合计（支持ND）", max_length=50)
+    vocs: Optional[str] = Field(None, description="VOCs（支持ND）", max_length=50)
     
     remark: Optional[str] = Field(None, description="备注")
 
@@ -39,19 +40,20 @@ class PCBOrganizedGasMonitoringUpdate(BaseModel):
     monitoring_point: Optional[str] = Field(None, description="监测点位", max_length=100)
     monitoring_time: Optional[str] = Field(None, description="监测时间", max_length=50)
     
-    # 监测项目及化验结果
-    nitrogen_oxides: Optional[Decimal] = Field(None, description="氮氧化物", ge=0)
-    hydrogen_chloride: Optional[Decimal] = Field(None, description="氯化氢", ge=0)
-    hydrogen_cyanide: Optional[Decimal] = Field(None, description="氰化氢", ge=0)
-    sulfuric_acid_mist: Optional[Decimal] = Field(None, description="硫酸雾", ge=0)
-    chromic_acid_mist: Optional[Decimal] = Field(None, description="铬酸雾", ge=0)
-    fluoride: Optional[Decimal] = Field(None, description="氟化物", ge=0)
-    phenol: Optional[Decimal] = Field(None, description="酚类", ge=0)
-    non_methane_hydrocarbons: Optional[Decimal] = Field(None, description="非甲烷总烃", ge=0)
-    benzene: Optional[Decimal] = Field(None, description="苯", ge=0)
-    toluene: Optional[Decimal] = Field(None, description="甲苯", ge=0)
-    xylene: Optional[Decimal] = Field(None, description="二甲苯", ge=0)
-    toluene_xylene_total: Optional[Decimal] = Field(None, description="甲苯与二甲苯合计", ge=0)
+    # 监测项目及化验结果（支持ND值，使用字符串类型）
+    nitrogen_oxides: Optional[str] = Field(None, description="氮氧化物（支持ND）", max_length=50)
+    hydrogen_chloride: Optional[str] = Field(None, description="氯化氢（支持ND）", max_length=50)
+    hydrogen_cyanide: Optional[str] = Field(None, description="氰化氢（支持ND）", max_length=50)
+    sulfuric_acid_mist: Optional[str] = Field(None, description="硫酸雾（支持ND）", max_length=50)
+    chromic_acid_mist: Optional[str] = Field(None, description="铬酸雾（支持ND）", max_length=50)
+    fluoride: Optional[str] = Field(None, description="氟化物（支持ND）", max_length=50)
+    phenol: Optional[str] = Field(None, description="酚类（支持ND）", max_length=50)
+    non_methane_hydrocarbons: Optional[str] = Field(None, description="非甲烷总烃（支持ND）", max_length=50)
+    benzene: Optional[str] = Field(None, description="苯（支持ND）", max_length=50)
+    toluene: Optional[str] = Field(None, description="甲苯（支持ND）", max_length=50)
+    xylene: Optional[str] = Field(None, description="二甲苯（支持ND）", max_length=50)
+    toluene_xylene_total: Optional[str] = Field(None, description="甲苯与二甲苯合计（支持ND）", max_length=50)
+    vocs: Optional[str] = Field(None, description="VOCs（支持ND）", max_length=50)
     
     remark: Optional[str] = Field(None, description="备注")
 
@@ -72,10 +74,12 @@ class PCBUnorganizedGasMonitoringBase(BaseModel):
     sampling_time: str = Field(..., description="采样时间", max_length=50)
     sampling_point: str = Field(..., description="采样点位", max_length=100)
     monitoring_factor: str = Field(..., description="监测因子", max_length=50)
-    emission_concentration: Optional[Decimal] = Field(None, description="排放浓度（mg/m³）", ge=0)
-    emission_limit: Optional[Decimal] = Field(None, description="排放浓度限值（mg/m³）", ge=0)
+    emission_concentration: Optional[str] = Field(None, alias="emissionConcentration", description="排放浓度（mg/m³，支持ND）", max_length=50)
+    emission_limit: Optional[Decimal] = Field(None, alias="emissionLimit", description="排放浓度限值（mg/m³）", ge=0)
     compliance: str = Field(..., description="达标情况", max_length=20)
     remark: Optional[str] = Field(None, description="备注")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
 
 
 class PCBUnorganizedGasMonitoringCreate(PCBUnorganizedGasMonitoringBase):
@@ -88,10 +92,12 @@ class PCBUnorganizedGasMonitoringUpdate(BaseModel):
     sampling_time: Optional[str] = Field(None, description="采样时间", max_length=50)
     sampling_point: Optional[str] = Field(None, description="采样点位", max_length=100)
     monitoring_factor: Optional[str] = Field(None, description="监测因子", max_length=50)
-    emission_concentration: Optional[Decimal] = Field(None, description="排放浓度（mg/m³）", ge=0)
-    emission_limit: Optional[Decimal] = Field(None, description="排放浓度限值（mg/m³）", ge=0)
+    emission_concentration: Optional[str] = Field(None, alias="emissionConcentration", description="排放浓度（mg/m³，支持ND）", max_length=50)
+    emission_limit: Optional[Decimal] = Field(None, alias="emissionLimit", description="排放浓度限值（mg/m³）", ge=0)
     compliance: Optional[str] = Field(None, description="达标情况", max_length=20)
     remark: Optional[str] = Field(None, description="备注")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
 
 
 class PCBUnorganizedGasMonitoringResponse(PCBUnorganizedGasMonitoringBase):
@@ -108,6 +114,7 @@ class PCBUnorganizedGasMonitoringResponse(PCBUnorganizedGasMonitoringBase):
 class PCBWastewaterMonitoringBase(BaseModel):
     """废水排放监测基础模式"""
     sampling_date: str = Field(..., description="采样日期", max_length=50)
+    monitoring_point: str = Field(default="", description="监测地点", max_length=100)
     
     # 检测结果（单位：mg/L）
     ph: Optional[Decimal] = Field(None, description="pH", ge=0)
@@ -117,6 +124,8 @@ class PCBWastewaterMonitoringBase(BaseModel):
     total_nitrogen: Optional[Decimal] = Field(None, description="总氮", ge=0)
     total_cyanide: Optional[Decimal] = Field(None, description="总氰化物", ge=0)
     total_copper: Optional[Decimal] = Field(None, description="总铜", ge=0)
+    nickel: Optional[Decimal] = Field(None, description="镍", ge=0)
+    nickel_outlet: Optional[Decimal] = Field(None, description="镍（镍排口）", ge=0)
     
     remark: Optional[str] = Field(None, description="备注")
 
@@ -129,6 +138,7 @@ class PCBWastewaterMonitoringCreate(PCBWastewaterMonitoringBase):
 class PCBWastewaterMonitoringUpdate(BaseModel):
     """更新废水排放监测"""
     sampling_date: Optional[str] = Field(None, description="采样日期", max_length=50)
+    monitoring_point: Optional[str] = Field(None, description="监测地点", max_length=100)
     
     # 检测结果（单位：mg/L）
     ph: Optional[Decimal] = Field(None, description="pH", ge=0)
@@ -138,6 +148,8 @@ class PCBWastewaterMonitoringUpdate(BaseModel):
     total_nitrogen: Optional[Decimal] = Field(None, description="总氮", ge=0)
     total_cyanide: Optional[Decimal] = Field(None, description="总氰化物", ge=0)
     total_copper: Optional[Decimal] = Field(None, description="总铜", ge=0)
+    nickel: Optional[Decimal] = Field(None, description="镍", ge=0)
+    nickel_outlet: Optional[Decimal] = Field(None, description="镍（镍排口）", ge=0)
     
     remark: Optional[str] = Field(None, description="备注")
 
@@ -157,10 +169,14 @@ class PCBGasEmissionMonitoringBase(BaseModel):
     """废气排放监测基础模式"""
     detection_point: str = Field(..., description="检测点位", max_length=100)
     detection_item: str = Field(..., description="检测项目", max_length=100)
-    detection_result: Optional[Decimal] = Field(None, description="检测结果", ge=0)
-    permitted_emission_limit: Optional[Decimal] = Field(None, description="许可排放浓度限值", ge=0)
-    stack_height: Optional[Decimal] = Field(None, description="排气筒高（m）", ge=0)
+    emission_rate: Optional[Decimal] = Field(None, alias="emissionRate", description="排放速率（kg/h）", ge=0)
+    benchmark_flow: Optional[Decimal] = Field(None, alias="benchmarkFlow", description="标杆流量（m³/h）", ge=0)
+    detection_result: Optional[str] = Field(None, alias="detectionResult", description="检测结果（支持ND）", max_length=50)
+    permitted_emission_limit: Optional[Decimal] = Field(None, alias="permittedEmissionLimit", description="许可排放浓度限值", ge=0)
+    stack_height: Optional[Decimal] = Field(None, alias="stackHeight", description="排气筒高（m）", ge=0)
     remark: Optional[str] = Field(None, description="备注")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
 
 
 class PCBGasEmissionMonitoringCreate(PCBGasEmissionMonitoringBase):
@@ -172,10 +188,14 @@ class PCBGasEmissionMonitoringUpdate(BaseModel):
     """更新废气排放监测"""
     detection_point: Optional[str] = Field(None, description="检测点位", max_length=100)
     detection_item: Optional[str] = Field(None, description="检测项目", max_length=100)
-    detection_result: Optional[Decimal] = Field(None, description="检测结果", ge=0)
-    permitted_emission_limit: Optional[Decimal] = Field(None, description="许可排放浓度限值", ge=0)
-    stack_height: Optional[Decimal] = Field(None, description="排气筒高（m）", ge=0)
+    emission_rate: Optional[Decimal] = Field(None, alias="emissionRate", description="排放速率（kg/h）", ge=0)
+    benchmark_flow: Optional[Decimal] = Field(None, alias="benchmarkFlow", description="标杆流量（m³/h）", ge=0)
+    detection_result: Optional[str] = Field(None, alias="detectionResult", description="检测结果（支持ND）", max_length=50)
+    permitted_emission_limit: Optional[Decimal] = Field(None, alias="permittedEmissionLimit", description="许可排放浓度限值", ge=0)
+    stack_height: Optional[Decimal] = Field(None, alias="stackHeight", description="排气筒高（m）", ge=0)
     remark: Optional[str] = Field(None, description="备注")
+    
+    model_config = {"extra": "allow", "populate_by_name": True}
 
 
 class PCBGasEmissionMonitoringResponse(PCBGasEmissionMonitoringBase):

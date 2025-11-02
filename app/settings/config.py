@@ -90,5 +90,9 @@ class Settings(BaseSettings):
     }
     DATETIME_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
+    # AI 大模型相关配置（可用环境变量覆盖）
+    AI_API_BASE: str = "https://ai.gitee.com/v1"
+    AI_API_KEY: str = os.getenv("AI_API_KEY", "GKIYJR8JFJCAIUVGVEAASIUQEXIH5ZVBQWGD7S1K")
+
 
 settings = Settings()
