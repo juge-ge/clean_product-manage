@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/mizhexiaoxiao/vue-fastapi-admin">
+  <a href="https://github.com/juge-ge/clean_product-manage">
     <img alt="Vue FastAPI Admin Logo" width="200" src="https://github.com/mizhexiaoxiao/vue-fastapi-admin/blob/main/deploy/sample-picture/logo.svg">
   </a>
 </p>
@@ -63,7 +63,7 @@ systemctl start docker
 ##### Build the Image
 
 ```sh
-git clone https://github.com/mizhexiaoxiao/vue-fastapi-admin.git
+git clone https://github.com/juge-ge/clean_product-manage.git
 cd vue-fastapi-admin
 docker build --no-cache . -t vue-fastapi-admin
 ```
