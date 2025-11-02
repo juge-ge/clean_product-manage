@@ -24,7 +24,7 @@ export function createVitePlugins(viteEnv, isBuild) {
   if (isBuild) {
     plugins.push(
       visualizer({
-        open: true,
+        open: false, // <--- 修改完成！构建完成后不再自动打开浏览器。
         gzipSize: true,
         brotliSize: true,
       }),

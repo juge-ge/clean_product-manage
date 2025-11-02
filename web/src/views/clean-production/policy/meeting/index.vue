@@ -100,7 +100,7 @@
       </div>
     </div>
 
-    <!-- 列表模式 -->
+    <!-- 列表模式（仅保留视频列表，移除会议筛选相关内容） -->
     <div v-else-if="displayMode === 'list'">
       <n-card class="mt-2">
         <template #header>
@@ -118,17 +118,7 @@
               </n-button>
             </n-space>
             <n-space>
-              <n-select
-                v-model:value="filterType"
-                placeholder="选择类型"
-                style="width: 120px"
-                clearable
-                @update:value="handleFilterChange"
-              >
-                <n-option value="conference" label="会议" />
-                <n-option value="training" label="培训" />
-                <n-option value="meeting" label="交流会" />
-              </n-select>
+              <!-- 移除NSelect筛选器 -->
               <n-input
                 v-model:value="searchKeyword"
                 placeholder="请输入关键词搜索"
@@ -139,19 +129,8 @@
           </n-space>
         </template>
 
-        <!-- 会议列表 -->
-        <meeting-list
-          v-if="currentListType === 'meetings'"
-          :data="getFilteredMeetings()"
-          :total="getTotalCount()"
-          :page-size="pageSize"
-          @item-click="goToDetail"
-          @page-change="handlePageChange"
-          @page-size-change="handlePageSizeChange"
-        />
-
         <!-- 视频列表 -->
-        <div v-else-if="currentListType === 'videos'" class="video-grid">
+        <div v-if="currentListType === 'videos'" class="video-grid">
           <div 
             v-for="item in getFilteredVideos()" 
             :key="item.id"
@@ -201,6 +180,17 @@
             </div>
           </div>
         </div>
+
+        <!-- 会议列表（简化版，无筛选功能） -->
+        <meeting-list
+          v-if="currentListType === 'meetings'"
+          :data="getFilteredMeetings()"
+          :total="getTotalCount()"
+          :page-size="pageSize"
+          @item-click="goToDetail"
+          @page-change="handlePageChange"
+          @page-size-change="handlePageSizeChange"
+        />
       </n-card>
     </div>
 
@@ -244,12 +234,14 @@ import MeetingList from './components/MeetingList.vue'
 import MeetingDetailModal from './components/MeetingDetailModal.vue'
 import VideoPlayer from './components/VideoPlayer.vue'
 import { mockMeetingApi } from './data/mockData.js'
+// 仅保留必要组件，移除NSelect相关导入
+import { NInputGroup, NInput, NButton, NIcon, NCard, NSpace, NTag, NModal } from 'naive-ui'
 
 // 使用项目自带的图标
 const arrowRightIcon = 'mdi-arrow-right'
 
 const searchKeyword = ref('')
-const filterType = ref('')
+// 移除filterType相关变量
 
 // 数据状态
 const meetings = ref([])
@@ -297,12 +289,10 @@ const goToVideoDetail = (video) => {
 }
 
 const handleViewAgenda = (meeting) => {
-  // 查看议程
   console.log('查看议程:', meeting.title)
 }
 
 const handleDownload = (meeting) => {
-  // 下载资料
   console.log('下载资料:', meeting.title)
 }
 
@@ -315,34 +305,29 @@ const handleVideoViewCountUpdate = () => {
 
 // 切换到列表显示模式
 const goToList = (type) => {
-  console.log('切换到列表模式:', type)
   currentListType.value = type
   displayMode.value = 'list'
   currentPage.value = 1 // 重置分页
-  filterType.value = ''
+  // 移除filterType重置
 }
 
 // 搜索处理
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
-    console.log('搜索关键词:', searchKeyword.value)
     currentListType.value = 'search'
     displayMode.value = 'list'
-    currentPage.value = 1 // 重置分页
+    currentPage.value = 1
   }
 }
 
-// 过滤处理
-const handleFilterChange = () => {
-  currentPage.value = 1
-}
+// 移除过滤处理函数handleFilterChange
 
 // 返回首页
 const goHome = () => {
   displayMode.value = 'home'
   currentListType.value = ''
   searchKeyword.value = ''
-  filterType.value = ''
+  // 移除filterType重置
   currentPage.value = 1
 }
 
@@ -354,7 +339,7 @@ const getListTitle = () => {
   return '会议与宣传'
 }
 
-// 获取过滤后的会议列表
+// 获取过滤后的会议列表（移除类型过滤）
 const getFilteredMeetings = () => {
   let data = meetings.value
   
@@ -367,9 +352,7 @@ const getFilteredMeetings = () => {
     )
   }
   
-  if (filterType.value) {
-    data = data.filter(item => item.type === filterType.value)
-  }
+  // 移除类型过滤逻辑
   
   // 分页处理
   const start = (currentPage.value - 1) * pageSize.value
@@ -396,7 +379,7 @@ const getFilteredVideos = () => {
   return data.slice(start, end)
 }
 
-// 获取总数
+// 获取总数（移除类型过滤）
 const getTotalCount = () => {
   if (currentListType.value === 'meetings') {
     let data = meetings.value
@@ -407,9 +390,6 @@ const getTotalCount = () => {
         item.summary.toLowerCase().includes(keyword) ||
         item.organizer.toLowerCase().includes(keyword)
       )
-    }
-    if (filterType.value) {
-      data = data.filter(item => item.type === filterType.value)
     }
     return data.length
   } else if (currentListType.value === 'videos') {
@@ -456,6 +436,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 样式部分保持不变 */
 .meeting-container {
   padding: 12px;
 }
